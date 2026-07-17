@@ -1,8 +1,8 @@
-# SonicAI - AI 音乐创作工作站
+# Melo Music - AI 音乐创作与发现平台
 
 ## 项目概览
 
-一站式 AI 音乐创作 + 社交发现平台，用自然语言 + 精细控件生成专业质感音乐作品，同时提供抖音式音乐发现、排行榜、AI 深度分析等社交功能。
+一站式 AI 音乐创作 + 社交发现平台，用自然语言 + 精细控件生成专业质感音乐作品，同时提供抖音式音乐发现、排行榜、AI MV 生成、AI 虚拟音乐人、AI 深度分析等社交功能。
 
 ### 核心功能
 
@@ -26,6 +26,11 @@
 15. **通知中心** - 点赞/评论/关注/@提及通知
 16. **社交互动** - 点赞/评论/收藏/关注
 
+**AI 创作模块**
+17. **AI MV 生成** - 分镜脚本 + 关键帧 + 视频合成，支持多种画风
+18. **AI 虚拟音乐人** - 一键生成完整音乐人 Profile（头像/名字/简介/风格）
+19. **全局播放器** - 底部常驻迷你播放器，切页面不打断
+
 ## 技术栈
 
 - **Framework**: Next.js 16 (App Router)
@@ -37,7 +42,9 @@
 - **音频可视化**: WaveSurfer.js
 - **数据库**: Supabase (PostgreSQL + Drizzle ORM)
 - **音乐 API**: Suno (第三方代理)
-- **LLM**: DeepSeek API (深度思考歌词 + AI 分析)
+- **LLM**: DeepSeek API (深度思考歌词 + AI 分析 + 虚拟音乐人生成)
+- **视频生成**: 预留接口（支持切换 coze generate video / Kling / Runway / Vidu）
+- **图片生成**: 预留接口（支持切换 coze generate image / DALL-E / SD）
 
 ## 目录结构
 
@@ -48,6 +55,8 @@ src/
 │   │   ├── generate-music/        # 音乐生成 API
 │   │   ├── generate-lyrics/       # 歌词生成 API
 │   │   ├── analyze-song/          # AI 歌曲分析 API
+│   │   ├── generate-mv/           # AI MV 生成 API
+│   │   ├── generate-artist/       # AI 虚拟音乐人生成 API
 │   │   └── interactions/          # 社交互动 API
 │   │       ├── like/              # 点赞
 │   │       ├── collect/           # 收藏
@@ -56,10 +65,12 @@ src/
 │   ├── (pages)
 │   │   ├── page.tsx               # 发现主页（抖音式滑动）
 │   │   ├── create/                # 创作工作台
+│   │   ├── create-artist/         # AI 虚拟音乐人生成
 │   │   ├── charts/                # 排行榜
 │   │   ├── hot/                   # 热搜页
 │   │   ├── artist/[id]/           # AI 音乐人主页
 │   │   ├── song/[id]/             # 单曲详情 + AI 分析
+│   │   ├── mv/[song_id]/          # MV 播放页
 │   │   ├── studio/                # 私人空间
 │   │   ├── notifications/         # 通知中心
 │   │   ├── library/               # 作品库
@@ -70,13 +81,18 @@ src/
 ├── components/
 │   ├── ui/                        # shadcn/ui 组件
 │   ├── navbar.tsx                 # 导航栏
+│   ├── global-player.tsx          # 全局底部播放器
 │   ├── music-style-selector.tsx   # 音乐风格选择器
 │   ├── singer-style-selector.tsx  # 歌手风格选择器
 │   ├── description-input.tsx      # 描述词输入
 │   ├── lyrics-editor.tsx          # 歌词编辑器
 │   ├── voice-upload.tsx           # 音色上传
 │   ├── music-player.tsx           # 音乐播放器
-│   └── deep-thinking-lyrics.tsx   # 深度思考歌词
+│   ├── deep-thinking-lyrics.tsx   # 深度思考歌词
+│   ├── mv-generator.tsx           # MV 生成器
+│   ├── mv-player.tsx              # MV 播放器
+│   ├── storyboard-editor.tsx      # 分镜编辑器
+│   └── artist-generator.tsx       # 虚拟音乐人生成器
 ├── lib/
 │   ├── utils.ts                   # 工具函数
 │   ├── music-styles.ts            # 音乐风格数据
@@ -94,10 +110,12 @@ src/
 |------|------|------|
 | `/` | 发现主页 | 抖音式上下滑动播放 |
 | `/create` | 创作工作台 | AI 音乐创作 |
+| `/create-artist` | AI 虚拟音乐人 | 一键生成音乐人 Profile |
 | `/charts` | 排行榜 | 歌曲 + 音乐人排行 |
 | `/hot` | 热搜页 | 热搜榜 + 搜索 |
 | `/artist/[id]` | 音乐人主页 | 公开 Profile |
 | `/song/[id]` | 单曲详情 | AI 深度分析 |
+| `/mv/[song_id]` | MV 播放页 | AI MV 生成与播放 |
 | `/studio` | 私人空间 | 数据仪表盘 |
 | `/notifications` | 通知中心 | 互动通知 |
 | `/library` | 作品库 | 历史作品 |
@@ -118,6 +136,8 @@ src/
 | `hot_search` | 热搜 |
 | `ai_analysis` | AI 分析缓存 |
 | `notifications` | 通知 |
+| `mvs` | AI 生成的 MV（分镜脚本、视频 URL、状态） |
+| `artists` | AI 生成的虚拟音乐人 Profile |
 
 ## 环境变量
 
@@ -125,7 +145,7 @@ src/
 # Suno API 密钥（音乐生成）
 SUNO_API_KEY=your_suno_api_key
 
-# DeepSeek API 密钥（歌词创作 + AI 分析）
+# DeepSeek API 密钥（歌词创作 + AI 分析 + 虚拟音乐人）
 DEEPSEEK_API_KEY=your_deepseek_api_key
 
 # ElevenLabs API 密钥（可选，音色克隆）
@@ -170,6 +190,12 @@ pnpm lint           # 代码检查
 
 ### POST /api/analyze-song
 AI 歌曲深度分析（SSE 流式响应）
+
+### POST /api/generate-mv
+AI MV 生成（分镜脚本 + 关键帧 + 视频合成）
+
+### POST /api/generate-artist
+AI 虚拟音乐人生成（头像/名字/简介/风格）
 
 ### POST /api/interactions/like
 点赞/取消点赞

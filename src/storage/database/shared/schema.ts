@@ -201,3 +201,54 @@ export const notifications = pgTable(
     index("notifications_created_at_idx").on(table.created_at),
   ]
 );
+
+// MVs table (AI generated music videos)
+export const mvs = pgTable(
+  "mvs",
+  {
+    id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+    song_id: varchar("song_id", { length: 36 }).notNull().references(() => songs.id),
+    storyboard: jsonb("storyboard"),
+    style: varchar("style", { length: 50 }).notNull().default("realistic"),
+    aspect_ratio: varchar("aspect_ratio", { length: 10 }).notNull().default("9:16"),
+    duration: integer("duration").default(0).notNull(),
+    cover_url: varchar("cover_url", { length: 500 }),
+    video_url: varchar("video_url", { length: 500 }),
+    status: varchar("status", { length: 20 }).notNull().default("pending"),
+    progress: integer("progress").default(0).notNull(),
+    created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updated_at: timestamp("updated_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("mvs_song_id_idx").on(table.song_id),
+    index("mvs_status_idx").on(table.status),
+  ]
+);
+
+// Artists table (AI generated virtual artists)
+export const artists = pgTable(
+  "artists",
+  {
+    id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+    user_id: varchar("user_id", { length: 36 }).references(() => users.id),
+    name: varchar("name", { length: 100 }).notNull(),
+    avatar_url: varchar("avatar_url", { length: 500 }),
+    slogan: varchar("slogan", { length: 200 }),
+    bio: text("bio"),
+    gender: varchar("gender", { length: 20 }),
+    age_group: varchar("age_group", { length: 20 }),
+    personality_tags: jsonb("personality_tags"),
+    style_tags: jsonb("style_tags"),
+    singing_techniques: jsonb("singing_techniques"),
+    language_preference: varchar("language_preference", { length: 20 }),
+    debut_date: varchar("debut_date", { length: 20 }),
+    region: varchar("region", { length: 50 }),
+    is_ai_generated: boolean("is_ai_generated").default(true).notNull(),
+    created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updated_at: timestamp("updated_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("artists_user_id_idx").on(table.user_id),
+    index("artists_is_ai_generated_idx").on(table.is_ai_generated),
+  ]
+);

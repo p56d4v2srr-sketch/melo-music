@@ -84,7 +84,7 @@ export default function LibraryPage() {
 
   const handleShare = async (work: Work) => {
     try {
-      await navigator.clipboard.writeText(`SonicAI 作品：${work.title}`);
+      await navigator.clipboard.writeText(`Melo Music 作品：${work.title}`);
       alert('链接已复制到剪贴板');
     } catch {
       alert('复制失败');

@@ -76,7 +76,7 @@ export function MusicPlayer({ audioUrl, isGenerating, generationProgress = 0 }: 
     if (!audioUrl) return;
     const link = document.createElement('a');
     link.href = audioUrl;
-    link.download = `sonicai-music-${Date.now()}.mp3`;
+    link.download = `melo-music-${Date.now()}.mp3`;
     link.click();
   };
 
