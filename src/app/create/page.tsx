@@ -14,6 +14,7 @@ import { Sparkles, Loader2 } from 'lucide-react';
 
 export default function CreatePage() {
   // State
+  const [songTitle, setSongTitle] = useState('');
   const [selectedStyles, setSelectedStyles] = useState<string[]>([]);
   const [selectedSingers, setSelectedSingers] = useState<string[]>([]);
   const [description, setDescription] = useState('');
@@ -55,6 +56,7 @@ export default function CreatePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          title: songTitle,
           styles: selectedStyles,
           singers: selectedSingers,
           description,
@@ -133,6 +135,25 @@ export default function CreatePage() {
 
           {/* Middle Column - Creation */}
           <div className="lg:col-span-5 space-y-6">
+            {/* Song Title Input */}
+            <div className="glass-card p-4">
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-semibold text-foreground">
+                  歌曲名称
+                </label>
+                <span className="text-xs text-muted-foreground">
+                  {songTitle.length}/20
+                </span>
+              </div>
+              <input
+                type="text"
+                value={songTitle}
+                onChange={(e) => setSongTitle(e.target.value)}
+                maxLength={20}
+                placeholder="请为你的歌曲起个名字"
+                className="w-full bg-background/50 border border-white/10 rounded-lg px-4 py-3 text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all"
+              />
+            </div>
             <DescriptionInput value={description} onChange={setDescription} />
             <LyricsEditor
               value={lyrics}
