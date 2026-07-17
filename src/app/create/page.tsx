@@ -15,6 +15,7 @@ import { Sparkles, Loader2 } from 'lucide-react';
 export default function CreatePage() {
   // State
   const [songTitle, setSongTitle] = useState('');
+  const [songDuration, setSongDuration] = useState(300); // 默认 5 分钟（300秒）
   const [selectedStyles, setSelectedStyles] = useState<string[]>([]);
   const [selectedSingers, setSelectedSingers] = useState<string[]>([]);
   const [description, setDescription] = useState('');
@@ -57,6 +58,7 @@ export default function CreatePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: songTitle,
+          duration: songDuration,
           styles: selectedStyles,
           singers: selectedSingers,
           description,
@@ -153,6 +155,32 @@ export default function CreatePage() {
                 placeholder="请为你的歌曲起个名字"
                 className="w-full bg-background/50 border border-white/10 rounded-lg px-4 py-3 text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all"
               />
+            </div>
+
+            {/* Song Duration Slider */}
+            <div className="glass-card p-4">
+              <div className="flex items-center justify-between mb-3">
+                <label className="text-sm font-semibold text-foreground">
+                  歌曲时长
+                </label>
+                <span className="text-sm font-mono text-primary">
+                  {Math.floor(songDuration / 60)}:{(songDuration % 60).toString().padStart(2, '0')}
+                </span>
+              </div>
+              <input
+                type="range"
+                min={240}
+                max={480}
+                step={30}
+                value={songDuration}
+                onChange={(e) => setSongDuration(Number(e.target.value))}
+                className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer slider-gold"
+              />
+              <div className="flex justify-between mt-2 text-xs text-muted-foreground">
+                <span>4:00</span>
+                <span>6:00</span>
+                <span>8:00</span>
+              </div>
             </div>
             <DescriptionInput value={description} onChange={setDescription} />
             <LyricsEditor

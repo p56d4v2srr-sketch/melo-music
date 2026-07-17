@@ -4,7 +4,7 @@ import { hasAceDataKey, generateMusic, type MusicResult } from '@/lib/acedata';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { styles, singers, description, lyrics, voiceId, title } = body;
+    const { styles, singers, description, lyrics, voiceId, title, duration } = body;
 
     // Validate input
     if (!styles || styles.length === 0) {
