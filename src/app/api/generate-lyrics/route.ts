@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { hasAceDataKey, generateLyrics } from '@/lib/acedata';
 
 export async function POST(request: NextRequest) {
   const encoder = new TextEncoder();
@@ -7,13 +8,10 @@ export async function POST(request: NextRequest) {
     async start(controller) {
       try {
         const body = await request.json();
-        const { theme, structure, language, rhymeScheme } = body;
+        const { theme, structure, language, rhymeScheme, description } = body;
 
-        // Check for DeepSeek API key
-        const deepseekApiKey = process.env.DEEPSEEK_API_KEY;
-
-        if (!deepseekApiKey) {
-          // Return demo lyrics if no API key configured
+        // 演示模式：无 AceData API Key 时返回演示数据
+        if (!hasAceDataKey()) {
           const demoLyrics = generateDemoLyrics(theme, structure);
           
           // Simulate streaming
@@ -42,13 +40,102 @@ export async function POST(request: NextRequest) {
           }
 
           controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify({ type: 'done' })}\n\n`)
+            encoder.encode(`data: ${JSON.stringify({ type: 'done', is_demo: true })}\n\n`)
           );
           controller.close();
           return;
         }
 
-        // Call DeepSeek API with streaming
+        // 尝试调用 AceData 歌词生成 API
+        let acedataLyricsFailed = false;
+        let acedataLyrics = '';
+
+        try {
+          const prompt = description || theme || '一首关于生活的歌曲';
+          const result = await generateLyrics(prompt);
+
+          if (result.success && result.data?.lyric) {
+            acedataLyrics = result.data.lyric;
+            
+            // 流式输出 AceData 返回的歌词
+            const steps = [
+              { step: '主题解构', content: `分析主题"${theme}"的核心情感和意象` },
+              { step: '意象搜集', content: '收集与主题相关的意象和场景' },
+              { step: '段落结构', content: `采用${structure}结构安排歌词` },
+            ];
+
+            for (const step of steps) {
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify({ type: 'step', ...step })}\n\n`)
+              );
+              await new Promise((resolve) => setTimeout(resolve, 300));
+            }
+
+            // Stream lyrics character by character
+            for (const char of acedataLyrics) {
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify({ type: 'lyrics', content: char })}\n\n`)
+              );
+              await new Promise((resolve) => setTimeout(resolve, 15));
+            }
+
+            controller.enqueue(
+              encoder.encode(`data: ${JSON.stringify({ type: 'done' })}\n\n`)
+            );
+            controller.close();
+            return;
+          } else {
+            acedataLyricsFailed = true;
+          }
+        } catch {
+          acedataLyricsFailed = true;
+        }
+
+        // TODO: DeepSeek fallback - 当 AceData 歌词 API 失败时，使用 DeepSeek
+        // if (process.env.DEEPSEEK_API_KEY && acedataLyricsFailed) {
+        //   // 调用 DeepSeek API 生成歌词
+        // }
+
+        // 最终兜底：使用演示数据
+        if (acedataLyricsFailed) {
+          const demoLyrics = generateDemoLyrics(theme, structure);
+          
+          const steps = [
+            { step: '主题解构', content: `分析主题"${theme}"的核心情感和意象` },
+            { step: '意象搜集', content: '收集与主题相关的意象和场景' },
+            { step: '段落结构', content: `采用${structure}结构安排歌词` },
+            { step: '韵脚规划', content: `使用${rhymeScheme}韵脚方案` },
+            { step: '逐段创作', content: '开始创作歌词内容' },
+            { step: '通篇润色', content: '优化歌词的流畅度和表现力' },
+          ];
+
+          for (const step of steps) {
+            controller.enqueue(
+              encoder.encode(`data: ${JSON.stringify({ type: 'step', ...step })}\n\n`)
+            );
+            await new Promise((resolve) => setTimeout(resolve, 500));
+          }
+
+          for (const char of demoLyrics) {
+            controller.enqueue(
+              encoder.encode(`data: ${JSON.stringify({ type: 'lyrics', content: char })}\n\n`)
+            );
+            await new Promise((resolve) => setTimeout(resolve, 20));
+          }
+
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify({ type: 'done', is_demo: true })}\n\n`)
+          );
+          controller.close();
+          return;
+        }
+
+        // 调用 DeepSeek API with streaming (保留原有逻辑)
+        const deepseekApiKey = process.env.DEEPSEEK_API_KEY;
+        if (!deepseekApiKey) {
+          throw new Error('No API key available');
+        }
+
         const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
           method: 'POST',
           headers: {
@@ -209,7 +296,7 @@ ${theme}的故事在心中酝酿
 让心灵得到解放
 
 [Verse 2]
- words flow like a river
+Words flow like a river
 情感在音符中跳跃
 每一个音节都是心跳
 每一段旋律都是思念

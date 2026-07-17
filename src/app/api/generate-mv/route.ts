@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { hasAceDataKey, generateMV } from '@/lib/acedata';
 
 export const runtime = 'nodejs';
 
@@ -13,12 +14,12 @@ const MV_STYLES = {
 };
 
 // Generate storyboard from lyrics
-function generateStoryboard(lyrics: string, style: string, duration: number): any[] {
+function generateStoryboard(lyrics: string, style: string, duration: number): StoryboardItem[] {
   const lines = lyrics.split('\n').filter(line => line.trim());
   const segmentCount = Math.min(Math.max(6, Math.floor(duration / 15)), 12);
   const segmentDuration = duration / segmentCount;
   
-  const storyboards = [];
+  const storyboards: StoryboardItem[] = [];
   
   for (let i = 0; i < segmentCount; i++) {
     const lyricSegment = lines[i % lines.length] || '';
@@ -46,7 +47,21 @@ function generateStoryboard(lyrics: string, style: string, duration: number): an
   return storyboards;
 }
 
-function generateSceneDescription(lyrics: string, style: string, index: number): string {
+interface StoryboardItem {
+  id: string;
+  startTime: number;
+  endTime: number;
+  duration: number;
+  lyrics: string;
+  sceneDescription: string;
+  emotion: string;
+  prompt: string;
+  imageUrl: string | null;
+  videoUrl: string | null;
+  status: string;
+}
+
+function generateSceneDescription(lyrics: string, _style: string, index: number): string {
   const scenes = [
     '广阔的星空下，一个人影独立于山巅',
     '城市霓虹闪烁的街道，雨后的倒影',
@@ -83,17 +98,15 @@ function getEmotionFromLyrics(lyrics: string): string {
   return '中性';
 }
 
-// Simulate MV generation progress
-async function simulateGeneration(
+// 演示模式：生成模拟数据
+function generateDemoMV(
   songId: string,
   style: string,
+  aspectRatio: string,
   duration: number,
   lyrics: string
-): Promise<{ storyboard: any[]; videoUrl: string; coverUrl: string }> {
+): { storyboard: StoryboardItem[]; videoUrl: string; coverUrl: string } {
   const storyboard = generateStoryboard(lyrics, style, duration);
-  
-  // Simulate generation time
-  await new Promise(resolve => setTimeout(resolve, 1000));
   
   // In demo mode, use sample video
   const videoUrl = '/sample-mv.mp4';
@@ -112,7 +125,7 @@ async function simulateGeneration(
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { songId, style = 'realistic', aspectRatio = '9:16', duration = 30, lyrics = '' } = body;
+    const { songId, style = 'realistic', aspectRatio = '9:16', duration = 30, lyrics = '', audio_url, cover_url, style_prompt } = body;
 
     if (!songId) {
       return NextResponse.json(
@@ -145,25 +158,79 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate MV (demo mode)
-    const result = await simulateGeneration(songId, style, duration, lyrics);
+    // 演示模式：无 AceData API Key 时返回演示数据
+    if (!hasAceDataKey()) {
+      const result = generateDemoMV(songId, style, aspectRatio, duration, lyrics);
+      
+      return NextResponse.json({
+        success: true,
+        is_demo: true,
+        mv: {
+          id: `mv-${Date.now()}`,
+          songId,
+          style,
+          aspectRatio,
+          duration,
+          storyboard: result.storyboard,
+          videoUrl: result.videoUrl,
+          coverUrl: result.coverUrl,
+          status: 'done',
+          progress: 100,
+          createdAt: new Date().toISOString(),
+        },
+        message: 'MV 生成成功（演示模式）',
+      });
+    }
 
+    // 调用 AceData 视频生成 API（使用 Luma 图生视频）
+    const storyboard = generateStoryboard(lyrics, style, duration);
+    const firstScene = storyboard[0];
+    const prompt = style_prompt || firstScene?.prompt || `${MV_STYLES[style as keyof typeof MV_STYLES]}, cinematic music video`;
+
+    // 如果没有提供 cover_url，使用默认封面
+    const imageUrl = cover_url || `https://images.unsplash.com/photo-1511671782779-C9D375A3A863?w=800&h=450&fit=crop`;
+
+    const result = await generateMV({
+      image_url: imageUrl,
+      prompt,
+      duration: Math.min(duration, 60), // Luma 限制最大 60 秒
+      audio_url: audio_url || undefined,
+    });
+
+    if (!result.success) {
+      const error = result.error!;
+      // 根据错误类型返回不同的 HTTP 状态
+      if (error.code === 'invalid_key') {
+        return NextResponse.json({ error: error.message, code: error.code }, { status: 401 });
+      }
+      if (error.code === 'insufficient_balance') {
+        return NextResponse.json({ error: error.message, code: error.code }, { status: 402 });
+      }
+      if (error.code === 'rate_limit') {
+        return NextResponse.json({ error: error.message, code: error.code }, { status: 429 });
+      }
+      return NextResponse.json({ error: error.message, code: error.code }, { status: 502 });
+    }
+
+    const taskId = result.task_id;
+
+    // 异步模式：返回 task_id，前端轮询
     return NextResponse.json({
       success: true,
+      taskId,
+      status: 'pending',
       mv: {
         id: `mv-${Date.now()}`,
         songId,
         style,
         aspectRatio,
         duration,
-        storyboard: result.storyboard,
-        videoUrl: result.videoUrl,
-        coverUrl: result.coverUrl,
-        status: 'done',
-        progress: 100,
+        storyboard,
+        status: 'processing',
+        progress: 0,
         createdAt: new Date().toISOString(),
       },
-      message: 'MV 生成成功（演示模式）',
+      message: 'MV 生成任务已提交，请轮询任务状态',
     });
   } catch (error) {
     console.error('MV generation error:', error);
