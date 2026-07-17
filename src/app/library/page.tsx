@@ -73,10 +73,11 @@ export default function LibraryPage() {
 
   const handleDownload = (work: Work) => {
     if (work.audioUrl) {
-      const link = document.createElement('a');
-      link.href = work.audioUrl;
-      link.download = `${work.title}.mp3`;
-      link.click();
+      const safeTitle = work.title
+        ? work.title.replace(/[/\\:*?"<>|]/g, '_').replace(/\s+/g, '_')
+        : `melo-${Date.now()}`;
+      const downloadUrl = `/api/download-song?url=${encodeURIComponent(work.audioUrl)}&filename=${encodeURIComponent(safeTitle + '.mp3')}`;
+      window.open(downloadUrl, '_self');
     } else {
       alert('音频文件不可用');
     }

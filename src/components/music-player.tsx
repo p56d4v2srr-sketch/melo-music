@@ -7,11 +7,12 @@ import { Play, Pause, Download, Share2, SkipBack, SkipForward } from 'lucide-rea
 
 interface MusicPlayerProps {
   audioUrl?: string;
+  title?: string;
   isGenerating?: boolean;
   generationProgress?: number;
 }
 
-export function MusicPlayer({ audioUrl, isGenerating, generationProgress = 0 }: MusicPlayerProps) {
+export function MusicPlayer({ audioUrl, title, isGenerating, generationProgress = 0 }: MusicPlayerProps) {
   const waveformRef = useRef<HTMLDivElement>(null);
   const wavesurferRef = useRef<WaveSurfer | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -74,10 +75,11 @@ export function MusicPlayer({ audioUrl, isGenerating, generationProgress = 0 }: 
 
   const handleDownload = () => {
     if (!audioUrl) return;
-    const link = document.createElement('a');
-    link.href = audioUrl;
-    link.download = `melo-music-${Date.now()}.mp3`;
-    link.click();
+    const safeTitle = title
+      ? title.replace(/[/\\:*?"<>|]/g, '_').replace(/\s+/g, '_')
+      : `melo-music-${Date.now()}`;
+    const downloadUrl = `/api/download-song?url=${encodeURIComponent(audioUrl)}&filename=${encodeURIComponent(safeTitle + '.mp3')}`;
+    window.open(downloadUrl, '_self');
   };
 
   const handleShare = async () => {

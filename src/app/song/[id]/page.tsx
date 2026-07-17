@@ -233,9 +233,14 @@ export default function SongDetailPage() {
               <button className="p-3 rounded-xl glass-card text-muted-foreground hover:text-foreground transition-all">
                 <Share2 className="w-5 h-5" />
               </button>
-              <button className="p-3 rounded-xl glass-card text-muted-foreground hover:text-foreground transition-all">
+              <a
+                href={`/api/download-song?url=${encodeURIComponent(song.audio_url)}&filename=${encodeURIComponent((song.title || 'melo-song').replace(/[/\\:*?"<>|]/g, '_').replace(/\s+/g, '_') + '.mp3')}`}
+                download={`${(song.title || 'melo-song').replace(/[/\\:*?"<>|]/g, '_').replace(/\s+/g, '_')}.mp3`}
+                className="p-3 rounded-xl glass-card text-muted-foreground hover:text-foreground transition-all"
+                title="下载"
+              >
                 <Download className="w-5 h-5" />
-              </button>
+              </a>
             </div>
 
             {/* Stats */}
