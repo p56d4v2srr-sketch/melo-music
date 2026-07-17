@@ -1,65 +1,167 @@
-# 项目上下文
+# SonicAI - AI 音乐创作工作站
 
-### 版本技术栈
+## 项目概览
+
+一站式 AI 音乐创作工具，用自然语言 + 精细控件生成专业质感音乐作品。
+
+### 核心功能
+
+1. **音乐风格选择器** - 130+ 主/细分风格的分类树
+2. **歌手演唱风格库** - 国内外知名歌手的演唱风格和技巧标签
+3. **深度思考歌词创作** - 接入 DeepSeek Reasoner 深度思考模式
+4. **描述词输入** - 大文本框，1500 字符上限，实时字数统计
+5. **歌词编辑器** - 大文本框，5000 字符上限，支持段落标签
+6. **音色上传** - 上传参考音频，预留音色克隆接口
+7. **音乐生成** - Suno API 为主，波形可视化播放
+8. **作品库** - 用户历史生成作品列表
+
+## 技术栈
 
 - **Framework**: Next.js 16 (App Router)
 - **Core**: React 19
 - **Language**: TypeScript 5
 - **UI 组件**: shadcn/ui (基于 Radix UI)
 - **Styling**: Tailwind CSS 4
+- **动画**: Framer Motion
+- **音频可视化**: WaveSurfer.js
+- **音乐 API**: Suno (第三方代理)
+- **LLM**: DeepSeek API (深度思考歌词)
 
 ## 目录结构
 
 ```
-├── public/                 # 静态资源
-├── scripts/                # 构建与启动脚本
-│   ├── build.sh            # 构建脚本
-│   ├── dev.sh              # 开发环境启动脚本
-│   ├── prepare.sh          # 预处理脚本
-│   └── start.sh            # 生产环境启动脚本
-├── src/
-│   ├── app/                # 页面路由与布局
-│   ├── components/ui/      # Shadcn UI 组件库
-│   ├── hooks/              # 自定义 Hooks
-│   ├── lib/                # 工具库
-│   │   └── utils.ts        # 通用工具函数 (cn)
-│   └── server.ts           # 自定义服务端入口
-├── next.config.ts          # Next.js 配置
-├── package.json            # 项目依赖管理
-└── tsconfig.json           # TypeScript 配置
+src/
+├── app/
+│   ├── api/
+│   │   ├── generate-music/     # 音乐生成 API
+│   │   └── generate-lyrics/    # 歌词生成 API
+│   ├── library/                # 作品库页面
+│   ├── voices/                 # 音色管理页面
+│   ├── settings/               # 设置页面
+│   ├── layout.tsx              # 根布局
+│   ├── page.tsx                # 创作主页
+│   └── globals.css             # 全局样式
+├── components/
+│   ├── ui/                     # shadcn/ui 组件
+│   ├── navbar.tsx              # 导航栏
+│   ├── music-style-selector.tsx # 音乐风格选择器
+│   ├── singer-style-selector.tsx # 歌手风格选择器
+│   ├── description-input.tsx   # 描述词输入
+│   ├── lyrics-editor.tsx       # 歌词编辑器
+│   ├── voice-upload.tsx        # 音色上传
+│   ├── music-player.tsx        # 音乐播放器
+│   └── deep-thinking-lyrics.tsx # 深度思考歌词
+└── lib/
+    ├── utils.ts                # 工具函数
+    ├── music-styles.ts         # 音乐风格数据
+    └── singer-styles.ts        # 歌手风格数据
 ```
 
-- 项目文件（如 app 目录、pages 目录、components 等）默认初始化到 `src/` 目录下。
+## 环境变量
 
-## 包管理规范
+需要在 `.env.local` 中配置：
 
-**仅允许使用 pnpm** 作为包管理器，**严禁使用 npm 或 yarn**。
-**常用命令**：
-- 安装依赖：`pnpm add <package>`
-- 安装开发依赖：`pnpm add -D <package>`
-- 安装所有依赖：`pnpm install`
-- 移除依赖：`pnpm remove <package>`
+```bash
+# Suno API 密钥（音乐生成）
+SUNO_API_KEY=your_suno_api_key
 
-## 开发规范
+# DeepSeek API 密钥（歌词创作）
+DEEPSEEK_API_KEY=your_deepseek_api_key
 
-### 编码规范
+# ElevenLabs API 密钥（可选，音色克隆）
+ELEVENLABS_API_KEY=your_elevenlabs_api_key
+```
 
-- 默认按 TypeScript `strict` 心智写代码；优先复用当前作用域已声明的变量、函数、类型和导入，禁止引用未声明标识符或拼错变量名。
-- 禁止隐式 `any` 和 `as any`；函数参数、返回值、解构项、事件对象、`catch` 错误在使用前应有明确类型或先完成类型收窄，并清理未使用的变量和导入。
+## 开发命令
 
-### next.config 配置规范
+```bash
+# 安装依赖
+pnpm install
 
-- 配置的路径不要写死绝对路径，必须使用 path.resolve(__dirname, ...)、import.meta.dirname 或 process.cwd() 动态拼接。
+# 启动开发服务器
+pnpm dev
 
-### Hydration 问题防范
+# 构建生产版本
+pnpm build
 
-1. 严禁在 JSX 渲染逻辑中直接使用 typeof window、Date.now()、Math.random() 等动态数据。**必须使用 'use client' 并配合 useEffect + useState 确保动态内容仅在客户端挂载后渲染**；同时严禁非法 HTML 嵌套（如 <p> 嵌套 <div>）。
-2. **禁止使用 head 标签**，优先使用 metadata，详见文档：https://nextjs.org/docs/app/api-reference/functions/generate-metadata
-   1. 三方 CSS、字体等资源可在 `globals.css` 中顶部通过 `@import` 引入或使用 next/font
-   2. preload, preconnect, dns-prefetch 通过 ReactDOM 的 preload、preconnect、dns-prefetch 方法引入
-   3. json-ld 可阅读 https://nextjs.org/docs/app/guides/json-ld
+# 启动生产服务器
+pnpm start
 
-## UI 设计与组件规范 (UI & Styling Standards)
+# 类型检查
+pnpm ts-check
 
-- 模板默认预装核心组件库 `shadcn/ui`，位于`src/components/ui/`目录下
-- Next.js 项目**必须默认**采用 shadcn/ui 组件、风格和规范，**除非用户指定用其他的组件和规范。**
+# 代码检查
+pnpm lint
+```
+
+## 设计规范
+
+详见 `DESIGN.md` 文件。
+
+### 视觉风格
+
+- **深色主题**：黑金/黑紫配色，音乐工作站质感
+- **磨砂玻璃**：backdrop-blur 效果，半透明卡片
+- **光晕效果**：金色/紫色柔和光晕
+- **音频可视化**：流动的波形动画
+
+### 色彩方案
+
+- 深空黑：`#0a0a0f` - 背景主色
+- 流金：`#d4af37` - 主强调色
+- 电紫：`#8b5cf6` - 次强调色
+
+## API 接口
+
+### POST /api/generate-music
+
+生成音乐
+
+**请求体**：
+```json
+{
+  "styles": ["pop", "mandopop"],
+  "singers": ["jay-chou"],
+  "description": "一首温暖的抒情歌曲",
+  "lyrics": "歌词内容",
+  "voiceId": "音色ID"
+}
+```
+
+**响应**：
+```json
+{
+  "audioUrl": "音频URL",
+  "taskId": "任务ID"
+}
+```
+
+### POST /api/generate-lyrics
+
+深度思考歌词创作（SSE 流式响应）
+
+**请求体**：
+```json
+{
+  "theme": "创作主题",
+  "structure": "verse-chorus",
+  "language": "chinese",
+  "rhymeScheme": "aabb"
+}
+```
+
+**响应**：SSE 流式数据
+```
+data: {"type":"step","step":"主题解构","content":"..."}
+data: {"type":"lyrics","content":"..."}
+data: {"type":"done"}
+```
+
+## 待办事项
+
+- [ ] 配置真实的 Suno API 密钥
+- [ ] 配置真实的 DeepSeek API 密钥
+- [ ] 实现 Mureka 备选 API
+- [ ] 实现 ElevenLabs 音色克隆
+- [ ] Electron 桌面版打包
+- [ ] 精细化的歌手技巧对照库
