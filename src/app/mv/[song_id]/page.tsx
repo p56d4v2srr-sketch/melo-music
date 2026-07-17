@@ -149,6 +149,13 @@ export default function MVPage() {
     }
   };
 
+  const handleDownloadMV = () => {
+    if (!mvData?.videoUrl) return;
+    const safeTitle = `melo-mv-${params.song_id || Date.now()}`;
+    const downloadUrl = `/api/download-song?url=${encodeURIComponent(mvData.videoUrl)}&filename=${encodeURIComponent(safeTitle + '.mp4')}&type=video`;
+    window.open(downloadUrl, '_self');
+  };
+
   const handleRegenerateScene = (index: number) => {
     if (!mvData) return;
     const updatedStoryboard = [...mvData.storyboard];
@@ -369,7 +376,7 @@ export default function MVPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={handleDownloadMV}>
               <Download className="w-4 h-4 mr-2" />
               下载
             </Button>
