@@ -6,6 +6,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { styles, singers, description, lyrics, voiceId, title, duration, language, vocal_type, mood, is_public, cover_url, cover_source } = body;
 
+    // 诊断 log：确认 Key 在运行时是否可读
+    console.log('[generate-music] ACEDATA_API_KEY present:', !!process.env.ACEDATA_API_KEY, 'len:', process.env.ACEDATA_API_KEY?.length ?? 0);
+
     // Validate input
     if (!styles || styles.length === 0) {
       return NextResponse.json(

@@ -89,7 +89,7 @@ export async function acedataFetch<T = unknown>(
   body: Record<string, unknown> = {},
   options: { method?: string; timeout?: number } = {}
 ): Promise<AceDataResponse<T>> {
-  const { method = 'POST', timeout = 30000 } = options;
+  const { method = 'POST', timeout = 180000 } = options; // 默认 3 分钟，音乐生成需要 30-120s
   const baseUrl = getAceDataBase();
   const url = `${baseUrl}${endpoint}`;
   
@@ -127,11 +127,12 @@ export async function acedataFetch<T = unknown>(
     };
   } catch (err) {
     if (err instanceof Error && err.name === 'AbortError') {
+      console.error('[AceData] Request aborted (timeout after', timeout, 'ms):', url);
       return {
         success: false,
         error: {
           code: 'server_error',
-          message: 'AceData 请求超时，请稍后重试',
+          message: `AceData 请求超时（${Math.round(timeout / 1000)}s），请稍后重试`,
         },
       };
     }
