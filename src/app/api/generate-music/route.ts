@@ -48,8 +48,8 @@ export async function POST(request: NextRequest) {
     // Determine if instrumental mode
     const isInstrumental = vocal_type === 'instrumental';
 
-    // Map vocal_type to AceData vocal_gender
-    const vocalGender = (vocal_type === 'male' || vocal_type === 'female') ? vocal_type : undefined;
+    // Map vocal_type to AceData vocal_gender (AceData expects 'f'/'m', not 'female'/'male')
+    const vocalGender = vocal_type === 'male' ? 'm' : vocal_type === 'female' ? 'f' : undefined;
 
     // 调用 AceData Suno API
     const result = await generateMusic({
@@ -182,12 +182,12 @@ function buildPrompt(
   }
 
   // Add styles
-  if (styles.length > 0) {
+  if (styles && styles.length > 0) {
     parts.push(`Style: ${styles.join(', ')}`);
   }
 
   // Add singer techniques
-  if (singers.length > 0) {
+  if (singers && singers.length > 0) {
     parts.push(`Vocal style inspired by: ${singers.join(', ')}`);
   }
 

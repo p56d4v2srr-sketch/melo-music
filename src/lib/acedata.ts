@@ -232,7 +232,7 @@ export interface GenerateMusicParams {
   persona_id?: string;
   wait?: boolean;
   duration?: number;
-  vocal_gender?: 'male' | 'female';
+  vocal_gender?: 'm' | 'f';
 }
 
 export interface MusicResult {
