@@ -229,6 +229,7 @@ export interface GenerateMusicParams {
   instrumental?: boolean;
   persona_id?: string;
   wait?: boolean;
+  duration?: number;
 }
 
 export interface MusicResult {
@@ -257,6 +258,7 @@ export async function generateMusic(params: GenerateMusicParams): Promise<AceDat
   if (params.instrumental !== undefined) body.instrumental = params.instrumental;
   if (params.persona_id) body.persona_id = params.persona_id;
   if (params.wait !== undefined) body.wait = params.wait;
+  if (params.duration !== undefined) body.duration = params.duration;
   
   return acedataFetch<{ task_id?: string; data?: MusicResult[] }>('/suno/audios', body);
 }

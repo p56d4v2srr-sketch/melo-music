@@ -16,6 +16,12 @@ export default function CreatePage() {
   // State
   const [songTitle, setSongTitle] = useState('');
   const [songDuration, setSongDuration] = useState(300); // 默认 5 分钟（300秒）
+  const [language, setLanguage] = useState('zh');
+  const [vocalType, setVocalType] = useState('female');
+  const [mood, setMood] = useState<string | null>(null);
+  const [isPublic, setIsPublic] = useState(true);
+  const [coverSource, setCoverSource] = useState<'ai' | 'upload'>('ai');
+  const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [selectedStyles, setSelectedStyles] = useState<string[]>([]);
   const [selectedSingers, setSelectedSingers] = useState<string[]>([]);
   const [description, setDescription] = useState('');
@@ -59,6 +65,12 @@ export default function CreatePage() {
         body: JSON.stringify({
           title: songTitle,
           duration: songDuration,
+          language,
+          vocal_type: vocalType,
+          mood: mood || undefined,
+          is_public: isPublic,
+          cover_source: coverSource,
+          cover_url: coverUrl || undefined,
           styles: selectedStyles,
           singers: selectedSingers,
           description,

@@ -46,11 +46,16 @@ export const songs = pgTable(
     title: varchar("title", { length: 200 }).notNull(),
     artist_id: varchar("artist_id", { length: 36 }).notNull().references(() => users.id),
     cover_url: varchar("cover_url", { length: 500 }),
+    cover_source: varchar("cover_source", { length: 16 }).default("ai"),
     audio_url: varchar("audio_url", { length: 500 }).notNull(),
     lyrics: text("lyrics"),
     style_tags: jsonb("style_tags"),
     description: text("description"),
     duration: integer("duration").default(0).notNull(),
+    language: varchar("language", { length: 16 }).default("zh"),
+    vocal_type: varchar("vocal_type", { length: 16 }).default("female"),
+    mood: varchar("mood", { length: 32 }),
+    is_public: boolean("is_public").default(true).notNull(),
     play_count: integer("play_count").default(0).notNull(),
     like_count: integer("like_count").default(0).notNull(),
     collect_count: integer("collect_count").default(0).notNull(),
@@ -66,6 +71,9 @@ export const songs = pgTable(
     index("songs_play_count_idx").on(table.play_count),
     index("songs_like_count_idx").on(table.like_count),
     index("songs_is_published_idx").on(table.is_published),
+    index("songs_is_public_idx").on(table.is_public),
+    index("songs_language_idx").on(table.language),
+    index("songs_mood_idx").on(table.mood),
   ]
 );
 

@@ -4,7 +4,7 @@ import { hasAceDataKey, generateMusic, type MusicResult } from '@/lib/acedata';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { styles, singers, description, lyrics, voiceId, title, duration } = body;
+    const { styles, singers, description, lyrics, voiceId, title, duration, language, vocal_type, mood, is_public, cover_url, cover_source } = body;
 
     // Validate input
     if (!styles || styles.length === 0) {
@@ -28,21 +28,31 @@ export async function POST(request: NextRequest) {
         taskId: `demo-task-${Date.now()}`,
         audioUrl: '/demo-music.mp3',
         imageUrl: '/demo-cover.jpg',
+        title: title || '演示歌曲',
+        language: language || 'zh',
+        vocal_type: vocal_type || 'female',
+        mood: mood || null,
+        is_public: is_public !== false,
+        cover_url: cover_url || null,
+        cover_source: cover_source || 'ai',
         message: '演示模式：AceData API 未配置，返回示例数据',
       });
     }
 
     // 构建 prompt
-    const prompt = buildPrompt(styles, singers, description);
+    const prompt = buildPrompt(styles, singers, description, language, vocal_type, mood);
+
+    // Determine if instrumental mode
+    const isInstrumental = vocal_type === 'instrumental';
 
     // 调用 AceData Suno API
     const result = await generateMusic({
       prompt,
-      lyric: lyrics || undefined,
+      lyric: isInstrumental ? undefined : (lyrics || undefined),
       style: styles.join(', '),
       title: title || undefined,
       custom: !!lyrics,
-      instrumental: !lyrics && !description,
+      instrumental: isInstrumental || (!lyrics && !description),
       persona_id: voiceId || undefined,
       wait: false, // 异步模式，前端轮询
     });
@@ -71,10 +81,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         taskId: taskId || data.task_id,
         audioUrl: music.audio_url,
-        imageUrl: music.image_url,
+        imageUrl: cover_url || music.image_url,
         duration: music.duration,
         lyric: music.lyric,
         title: music.title,
+        language: language || 'zh',
+        vocal_type: vocal_type || 'female',
+        mood: mood || null,
+        is_public: is_public !== false,
+        cover_url: cover_url || music.image_url || null,
+        cover_source: cover_source || 'ai',
       });
     }
 
@@ -82,6 +98,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       taskId: taskId,
       status: 'pending',
+      language: language || 'zh',
+      vocal_type: vocal_type || 'female',
+      mood: mood || null,
+      is_public: is_public !== false,
+      cover_url: cover_url || null,
+      cover_source: cover_source || 'ai',
       message: '音乐生成任务已提交，请轮询任务状态',
     });
   } catch (error) {
@@ -96,9 +118,49 @@ export async function POST(request: NextRequest) {
 function buildPrompt(
   styles: string[],
   singers: string[],
-  description: string
+  description: string,
+  language?: string,
+  vocalType?: string,
+  mood?: string
 ): string {
   const parts: string[] = [];
+
+  // Add language description
+  const langMap: Record<string, string> = {
+    'zh': 'Chinese lyrics',
+    'en': 'English lyrics',
+    'ja': 'Japanese lyrics',
+    'zh-en': 'Bilingual Chinese-English lyrics',
+    'zh-ja': 'Bilingual Chinese-Japanese lyrics',
+  };
+  if (language && langMap[language]) {
+    parts.push(langMap[language]);
+  }
+
+  // Add vocal type description
+  const vocalMap: Record<string, string> = {
+    'male': 'male vocal',
+    'female': 'female vocal',
+    'chorus': 'chorus vocals',
+  };
+  if (vocalType && vocalMap[vocalType]) {
+    parts.push(vocalMap[vocalType]);
+  }
+
+  // Add mood description
+  const moodMap: Record<string, string> = {
+    'happy': 'happy',
+    'sad': 'sad',
+    'passionate': 'passionate',
+    'affectionate': 'affectionate',
+    'healing': 'healing',
+    'mysterious': 'mysterious',
+    'intense': 'intense',
+    'calm': 'calm',
+  };
+  if (mood && moodMap[mood]) {
+    parts.push(`Mood: ${moodMap[mood]}`);
+  }
 
   // Add styles
   if (styles.length > 0) {
