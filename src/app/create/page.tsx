@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { Navbar } from '@/components/navbar';
 import { MusicStyleSelector } from '@/components/music-style-selector';
 import { SingerStyleSelector } from '@/components/singer-style-selector';
@@ -34,12 +35,12 @@ export default function CreatePage() {
 
   const handleGenerate = async () => {
     if (selectedStyles.length === 0) {
-      alert('请至少选择一个音乐风格');
+      toast.error('请至少选择一个音乐风格');
       return;
     }
 
     if (!description.trim() && !lyrics.trim()) {
-      alert('请输入描述词或歌词');
+      toast.error('请输入描述词或歌词');
       return;
     }
 
@@ -81,16 +82,38 @@ export default function CreatePage() {
 
       clearInterval(progressInterval);
 
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error('生成失败');
+        // Structured error from backend
+        const errorType = data.error_type || 'unknown';
+        const message = data.error || data.message || '生成失败';
+        const suggestion = data.suggestion || '请稍后重试';
+        
+        if (errorType === 'invalid_key') {
+          toast.error('API Key 无效', { description: suggestion });
+        } else if (errorType === 'quota_exceeded') {
+          toast.error('额度不足', { description: suggestion });
+        } else if (errorType === 'rate_limit') {
+          toast.error('请求频率超限', { description: suggestion });
+        } else {
+          toast.error(message, { description: suggestion });
+        }
+        return;
       }
 
-      const data = await response.json();
+      // Success
+      if (data.is_demo) {
+        toast.success('演示模式', { description: data.message || '当前为演示模式，配置 API Key 后可生成真实音乐' });
+      } else {
+        toast.success('音乐生成任务已提交');
+      }
+      
       setGenerationProgress(100);
       setGeneratedAudioUrl(data.audioUrl);
     } catch (error) {
       console.error('生成失败:', error);
-      alert('音乐生成失败，请稍后重试');
+      toast.error('音乐生成失败', { description: '网络异常，请检查网络连接后重试' });
     } finally {
       setIsGenerating(false);
     }

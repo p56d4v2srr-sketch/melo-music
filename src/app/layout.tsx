@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Inspector } from 'react-dev-inspector';
 import { PlayerProvider } from '@/components/global-player';
+import { Toaster } from '@/components/ui/sonner';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -45,6 +46,7 @@ export default function RootLayout({
         <PlayerProvider>
           {children}
         </PlayerProvider>
+        <Toaster />
       </body>
     </html>
   );

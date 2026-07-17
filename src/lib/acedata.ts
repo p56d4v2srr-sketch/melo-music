@@ -102,6 +102,7 @@ export async function acedataFetch<T = unknown>(
       headers: {
         'Authorization': `Bearer ${process.env.ACEDATA_API_KEY}`,
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
       },
       body: JSON.stringify(body),
       signal: controller.signal,
@@ -230,6 +231,7 @@ export interface GenerateMusicParams {
   persona_id?: string;
   wait?: boolean;
   duration?: number;
+  vocal_gender?: 'male' | 'female';
 }
 
 export interface MusicResult {
@@ -259,8 +261,17 @@ export async function generateMusic(params: GenerateMusicParams): Promise<AceDat
   if (params.persona_id) body.persona_id = params.persona_id;
   if (params.wait !== undefined) body.wait = params.wait;
   if (params.duration !== undefined) body.duration = params.duration;
+  if (params.vocal_gender) body.vocal_gender = params.vocal_gender;
   
-  return acedataFetch<{ task_id?: string; data?: MusicResult[] }>('/suno/audios', body);
+  console.log('[AceData] Request:', { url: `${getAceDataBase()}/suno/audios`, body });
+  
+  const result = await acedataFetch<{ task_id?: string; data?: MusicResult[] }>('/suno/audios', body);
+  
+  if (!result.success) {
+    console.error('[AceData] Error response:', JSON.stringify(result.error, null, 2));
+  }
+  
+  return result;
 }
 
 /**

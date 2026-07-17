@@ -50,8 +50,8 @@ export async function GET(
           status: 'complete',
           progress: 100,
           data: {
-            audio_url: '/demo-music.mp3',
-            image_url: '/demo-cover.jpg',
+            audio_url: 'https://commondatastorage.googleapis.com/codeskulptor-assets/Epoq-Lepidoptera.ogg',
+            image_url: 'https://picsum.photos/seed/melo-demo/512/512',
             duration: 180,
             title: '演示歌曲',
           },
