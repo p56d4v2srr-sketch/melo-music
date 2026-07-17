@@ -2,14 +2,16 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Music, Library, Mic2, Settings } from 'lucide-react';
+import { Music, Library, Mic2, Settings, Compass, TrendingUp, Flame, User, Bell } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
-  { href: '/', label: '创作', icon: Music },
+  { href: '/', label: '发现', icon: Compass },
+  { href: '/charts', label: '排行榜', icon: TrendingUp },
+  { href: '/hot', label: '热搜', icon: Flame },
+  { href: '/create', label: '创作', icon: Music },
   { href: '/library', label: '作品库', icon: Library },
-  { href: '/voices', label: '我的音色', icon: Mic2 },
-  { href: '/settings', label: '设置', icon: Settings },
+  { href: '/studio', label: '我的', icon: User },
 ];
 
 export function Navbar() {
@@ -37,17 +39,39 @@ export function Navbar() {
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    'flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200',
+                    'flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200',
                     isActive
                       ? 'bg-white/10 text-primary glow-gold'
                       : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
                   )}
                 >
                   <Icon className="w-4 h-4" />
-                  <span className="hidden sm:inline">{item.label}</span>
+                  <span className="hidden md:inline text-sm">{item.label}</span>
                 </Link>
               );
             })}
+          </div>
+
+          {/* Right side */}
+          <div className="flex items-center gap-2">
+            <Link
+              href="/notifications"
+              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all"
+            >
+              <Bell className="w-5 h-5" />
+            </Link>
+            <Link
+              href="/voices"
+              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all"
+            >
+              <Mic2 className="w-5 h-5" />
+            </Link>
+            <Link
+              href="/settings"
+              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all"
+            >
+              <Settings className="w-5 h-5" />
+            </Link>
           </div>
         </div>
       </div>

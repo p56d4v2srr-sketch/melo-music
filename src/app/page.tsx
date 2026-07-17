@@ -1,187 +1,390 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Navbar } from '@/components/navbar';
-import { MusicStyleSelector } from '@/components/music-style-selector';
-import { SingerStyleSelector } from '@/components/singer-style-selector';
-import { DescriptionInput } from '@/components/description-input';
-import { LyricsEditor } from '@/components/lyrics-editor';
-import { VoiceUpload, type VoiceFile } from '@/components/voice-upload';
-import { MusicPlayer } from '@/components/music-player';
-import { DeepThinkingLyrics } from '@/components/deep-thinking-lyrics';
+import { mockSongsWithArtists, formatCount, formatDuration, type MockSong } from '@/lib/mock-data';
 import { Button } from '@/components/ui/button';
-import { Sparkles, Loader2 } from 'lucide-react';
+import {
+  Play,
+  Pause,
+  Heart,
+  MessageCircle,
+  Star,
+  Share2,
+  ChevronUp,
+  ChevronDown,
+  Music,
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
-export default function CreatePage() {
-  // State
-  const [selectedStyles, setSelectedStyles] = useState<string[]>([]);
-  const [selectedSingers, setSelectedSingers] = useState<string[]>([]);
-  const [description, setDescription] = useState('');
-  const [lyrics, setLyrics] = useState('');
-  const [uploadedVoices, setUploadedVoices] = useState<VoiceFile[]>([]);
-  const [selectedVoice, setSelectedVoice] = useState<string>();
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [generationProgress, setGenerationProgress] = useState(0);
-  const [generatedAudioUrl, setGeneratedAudioUrl] = useState<string>();
+export default function DiscoverPage() {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [likedSongs, setLikedSongs] = useState<Set<string>>(new Set());
+  const [collectedSongs, setCollectedSongs] = useState<Set<string>>(new Set());
+  const [direction, setDirection] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const touchStartY = useRef(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const handleGenerate = async () => {
-    if (selectedStyles.length === 0) {
-      alert('请至少选择一个音乐风格');
-      return;
+  const songs = mockSongsWithArtists;
+  const currentSong = songs[currentIndex];
+
+  const goNext = useCallback(() => {
+    if (currentIndex < songs.length - 1) {
+      setDirection(1);
+      setCurrentIndex((prev) => prev + 1);
+      setIsPlaying(true);
     }
+  }, [currentIndex, songs.length]);
 
-    if (!description.trim() && !lyrics.trim()) {
-      alert('请输入描述词或歌词');
-      return;
+  const goPrev = useCallback(() => {
+    if (currentIndex > 0) {
+      setDirection(-1);
+      setCurrentIndex((prev) => prev - 1);
+      setIsPlaying(true);
     }
+  }, [currentIndex]);
 
-    setIsGenerating(true);
-    setGenerationProgress(0);
-    setGeneratedAudioUrl(undefined);
-
-    try {
-      // Simulate progress
-      const progressInterval = setInterval(() => {
-        setGenerationProgress((prev) => {
-          if (prev >= 90) {
-            clearInterval(progressInterval);
-            return 90;
-          }
-          return prev + 10;
-        });
-      }, 500);
-
-      const response = await fetch('/api/generate-music', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          styles: selectedStyles,
-          singers: selectedSingers,
-          description,
-          lyrics,
-          voiceId: selectedVoice,
-        }),
-      });
-
-      clearInterval(progressInterval);
-
-      if (!response.ok) {
-        throw new Error('生成失败');
+  const handleWheel = useCallback(
+    (e: WheelEvent) => {
+      e.preventDefault();
+      if (e.deltaY > 30) {
+        goNext();
+      } else if (e.deltaY < -30) {
+        goPrev();
       }
+    },
+    [goNext, goPrev]
+  );
 
-      const data = await response.json();
-      setGenerationProgress(100);
-      setGeneratedAudioUrl(data.audioUrl);
-    } catch (error) {
-      console.error('生成失败:', error);
-      alert('音乐生成失败，请稍后重试');
-    } finally {
-      setIsGenerating(false);
-    }
+  const handleTouchStart = useCallback((e: TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY;
+  }, []);
+
+  const handleTouchEnd = useCallback(
+    (e: TouchEvent) => {
+      const touchEndY = e.changedTouches[0].clientY;
+      const diff = touchStartY.current - touchEndY;
+      if (diff > 50) {
+        goNext();
+      } else if (diff < -50) {
+        goPrev();
+      }
+    },
+    [goNext, goPrev]
+  );
+
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key === 'ArrowDown' || e.key === ' ') {
+        e.preventDefault();
+        goNext();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        goPrev();
+      }
+    },
+    [goNext, goPrev]
+  );
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    container.addEventListener('wheel', handleWheel, { passive: false });
+    container.addEventListener('touchstart', handleTouchStart, { passive: true });
+    container.addEventListener('touchend', handleTouchEnd, { passive: true });
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      container.removeEventListener('wheel', handleWheel);
+      container.removeEventListener('touchstart', handleTouchStart);
+      container.removeEventListener('touchend', handleTouchEnd);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [handleWheel, handleTouchStart, handleTouchEnd, handleKeyDown]);
+
+  const toggleLike = () => {
+    const songId = currentSong.id;
+    setLikedSongs((prev) => {
+      const next = new Set(prev);
+      if (next.has(songId)) {
+        next.delete(songId);
+      } else {
+        next.add(songId);
+      }
+      return next;
+    });
   };
 
-  const handleVoiceUpload = (voice: VoiceFile) => {
-    setUploadedVoices([...uploadedVoices, voice]);
+  const toggleCollect = () => {
+    const songId = currentSong.id;
+    setCollectedSongs((prev) => {
+      const next = new Set(prev);
+      if (next.has(songId)) {
+        next.delete(songId);
+      } else {
+        next.add(songId);
+      }
+      return next;
+    });
   };
 
-  const handleVoiceRemove = (id: string) => {
-    setUploadedVoices(uploadedVoices.filter((v) => v.id !== id));
-    if (selectedVoice === id) {
-      setSelectedVoice(undefined);
-    }
+  const togglePlay = () => {
+    setIsPlaying(!isPlaying);
   };
 
-  const handleLyricsFromAI = (aiLyrics: string) => {
-    setLyrics(aiLyrics);
+  // Parse current lyrics line
+  const getCurrentLyricLine = () => {
+    if (!currentSong.lyrics) return '';
+    const lines = currentSong.lyrics.split('\n').filter((l) => l.trim() && !l.startsWith('['));
+    return lines[0] || '';
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="h-screen bg-background overflow-hidden">
       <Navbar />
-      
-      <main className="pt-20 pb-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gradient-gold mb-2">
-            AI 音乐创作
-          </h1>
-          <p className="text-muted-foreground">
-            选择风格、描述情绪，让 AI 为你创作独一无二的音乐作品
-          </p>
-        </div>
 
-        {/* Three Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left Column - Parameters */}
-          <div className="lg:col-span-3 space-y-6">
-            <MusicStyleSelector
-              selectedStyles={selectedStyles}
-              onSelectionChange={setSelectedStyles}
-            />
-            <SingerStyleSelector
-              selectedSingers={selectedSingers}
-              onSelectionChange={setSelectedSingers}
-            />
-            <VoiceUpload
-              uploadedVoices={uploadedVoices}
-              onUpload={handleVoiceUpload}
-              onRemove={handleVoiceRemove}
-              selectedVoice={selectedVoice}
-              onSelectVoice={setSelectedVoice}
-            />
-          </div>
-
-          {/* Middle Column - Creation */}
-          <div className="lg:col-span-5 space-y-6">
-            <DescriptionInput value={description} onChange={setDescription} />
-            <LyricsEditor
-              value={lyrics}
-              onChange={setLyrics}
-              onImportFromAI={handleLyricsFromAI}
-            />
-            <DeepThinkingLyrics onLyricsGenerated={handleLyricsFromAI} />
-          </div>
-
-          {/* Right Column - Result */}
-          <div className="lg:col-span-4 space-y-6">
-            <MusicPlayer
-              audioUrl={generatedAudioUrl}
-              isGenerating={isGenerating}
-              generationProgress={generationProgress}
-            />
-
-            {/* Generate Button */}
-            <Button
-              onClick={handleGenerate}
-              disabled={isGenerating}
-              className="w-full py-6 text-lg font-semibold gradient-gold-purple hover:opacity-90 glow-gold disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isGenerating ? (
-                <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  生成中...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-5 h-5 mr-2" />
-                  生成音乐
-                </>
-              )}
-            </Button>
-
-            {/* Tips */}
-            <div className="glass-card p-4">
-              <h3 className="text-sm font-semibold mb-2">💡 创作提示</h3>
-              <ul className="text-xs text-muted-foreground space-y-1">
-                <li>• 选择 2-3 个风格可以创造独特的融合效果</li>
-                <li>• 描述词越详细，生成效果越精准</li>
-                <li>• 使用 AI 深度思考功能创作高质量歌词</li>
-                <li>• 上传音色可以克隆特定的声音特质</li>
-              </ul>
+      <div ref={containerRef} className="relative h-full w-full pt-16">
+        <AnimatePresence mode="wait" custom={direction}>
+          <motion.div
+            key={currentSong.id}
+            custom={direction}
+            initial={{
+              y: direction > 0 ? '100%' : '-100%',
+              opacity: 0,
+            }}
+            animate={{
+              y: 0,
+              opacity: 1,
+            }}
+            exit={{
+              y: direction > 0 ? '-100%' : '100%',
+              opacity: 0,
+            }}
+            transition={{
+              type: 'spring',
+              stiffness: 300,
+              damping: 30,
+            }}
+            className="absolute inset-0 flex items-center justify-center"
+          >
+            {/* Background with blur */}
+            <div className="absolute inset-0">
+              <div
+                className="absolute inset-0 bg-cover bg-center scale-110 blur-3xl opacity-30"
+                style={{ backgroundImage: `url(${currentSong.cover_url})` }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/80 to-background" />
             </div>
-          </div>
-        </div>
-      </main>
+
+            {/* Main Content */}
+            <div className="relative z-10 flex items-center justify-center w-full h-full px-4">
+              <div className="flex flex-col lg:flex-row items-center gap-8 lg:gap-16 max-w-6xl w-full">
+                {/* Cover Art */}
+                <div className="relative group">
+                  <div className="w-64 h-64 sm:w-80 sm:h-80 lg:w-96 lg:h-96 rounded-2xl overflow-hidden shadow-2xl shadow-primary/20">
+                    <img
+                      src={currentSong.cover_url}
+                      alt={currentSong.title}
+                      className="w-full h-full object-cover"
+                    />
+                    {/* Play overlay */}
+                    <div
+                      className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                      onClick={togglePlay}
+                    >
+                      <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                        {isPlaying ? (
+                          <Pause className="w-8 h-8 text-white" />
+                        ) : (
+                          <Play className="w-8 h-8 text-white ml-1" />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Wave animation */}
+                  {isPlaying && (
+                    <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 flex items-end gap-1 h-8">
+                      {Array.from({ length: 20 }).map((_, i) => (
+                        <div
+                          key={i}
+                          className="w-1 bg-gradient-to-t from-primary to-accent rounded-full wave-animation"
+                          style={{
+                            height: `${20 + Math.sin(i * 0.5) * 30 + 30}%`,
+                            animationDelay: `${i * 0.05}s`,
+                          }}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Song Info */}
+                <div className="flex-1 text-center lg:text-left max-w-lg">
+                  <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gradient-gold mb-4">
+                    {currentSong.title}
+                  </h1>
+
+                  {/* Artist */}
+                  <div className="flex items-center gap-3 justify-center lg:justify-start mb-6">
+                    <img
+                      src={currentSong.artist?.avatar}
+                      alt={currentSong.artist?.nickname}
+                      className="w-10 h-10 rounded-full border-2 border-primary/50"
+                    />
+                    <div>
+                      <p className="text-foreground font-medium">{currentSong.artist?.nickname}</p>
+                      <p className="text-sm text-muted-foreground">{currentSong.artist?.slogan}</p>
+                    </div>
+                  </div>
+
+                  {/* Style Tags */}
+                  <div className="flex flex-wrap gap-2 justify-center lg:justify-start mb-6">
+                    {currentSong.style_tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="px-3 py-1 text-xs rounded-full bg-white/5 border border-white/10 text-muted-foreground"
+                      >
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
+
+                  {/* Description */}
+                  <p className="text-muted-foreground mb-6 text-sm leading-relaxed">
+                    {currentSong.description}
+                  </p>
+
+                  {/* Current Lyric Line */}
+                  <div className="glass-card p-4 rounded-xl mb-6">
+                    <p className="text-foreground italic text-center">&quot;{getCurrentLyricLine()}&quot;</p>
+                  </div>
+
+                  {/* Stats */}
+                  <div className="flex items-center gap-6 justify-center lg:justify-start text-sm text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <Play className="w-4 h-4" />
+                      {formatCount(currentSong.play_count)}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Heart className="w-4 h-4" />
+                      {formatCount(currentSong.like_count)}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <MessageCircle className="w-4 h-4" />
+                      {formatCount(currentSong.comment_count)}
+                    </span>
+                    <span>{formatDuration(currentSong.duration)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Side Actions */}
+            <div className="absolute right-4 sm:right-8 top-1/2 -translate-y-1/2 flex flex-col gap-6 z-20">
+              <ActionButton
+                icon={Heart}
+                count={currentSong.like_count + (likedSongs.has(currentSong.id) ? 1 : 0)}
+                isActive={likedSongs.has(currentSong.id)}
+                activeColor="text-red-500"
+                onClick={toggleLike}
+                label="点赞"
+              />
+              <ActionButton
+                icon={MessageCircle}
+                count={currentSong.comment_count}
+                onClick={() => {}}
+                label="评论"
+              />
+              <ActionButton
+                icon={Star}
+                count={currentSong.collect_count + (collectedSongs.has(currentSong.id) ? 1 : 0)}
+                isActive={collectedSongs.has(currentSong.id)}
+                activeColor="text-yellow-500"
+                onClick={toggleCollect}
+                label="收藏"
+              />
+              <ActionButton icon={Share2} onClick={() => {}} label="分享" />
+            </div>
+
+            {/* Bottom Navigation Hints */}
+            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 z-20">
+              {currentIndex > 0 && (
+                <button
+                  onClick={goPrev}
+                  className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
+                >
+                  <ChevronUp className="w-5 h-5 text-muted-foreground" />
+                </button>
+              )}
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Music className="w-3 h-3" />
+                <span>
+                  {currentIndex + 1} / {songs.length}
+                </span>
+              </div>
+              {currentIndex < songs.length - 1 && (
+                <button
+                  onClick={goNext}
+                  className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
+                >
+                  <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                </button>
+              )}
+            </div>
+          </motion.div>
+        </AnimatePresence>
+
+        {/* Hidden audio element */}
+        <audio ref={audioRef} src={currentSong.audio_url} />
+      </div>
     </div>
+  );
+}
+
+function ActionButton({
+  icon: Icon,
+  count,
+  isActive,
+  activeColor,
+  onClick,
+  label,
+}: {
+  icon: React.ComponentType<{ className?: string; fill?: string }>;
+  count?: number;
+  isActive?: boolean;
+  activeColor?: string;
+  onClick: () => void;
+  label: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex flex-col items-center gap-1 group"
+      title={label}
+    >
+      <div
+        className={cn(
+          'w-12 h-12 rounded-full glass-card flex items-center justify-center transition-all duration-200',
+          'hover:scale-110 hover:bg-white/10',
+          isActive && 'glow-gold'
+        )}
+      >
+        <Icon
+          className={cn(
+            'w-5 h-5 transition-colors',
+            isActive ? activeColor || 'text-primary' : 'text-muted-foreground group-hover:text-foreground'
+          )}
+          fill={isActive ? 'currentColor' : 'none'}
+        />
+      </div>
+      {count !== undefined && (
+        <span className="text-xs text-muted-foreground">{formatCount(count)}</span>
+      )}
+    </button>
   );
 }
