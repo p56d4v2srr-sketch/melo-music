@@ -118,7 +118,8 @@ export async function POST(request: NextRequest) {
       // 对返回的歌词也做净化（防止 provider 返回带方括号的歌词）
       const returnSanitize = music.lyric ? sanitizeLyrics(music.lyric) : undefined;
       const finalLyrics = returnSanitize?.sanitized || sanitizedLyrics || null;
-      const finalAnalysis = returnSanitize || sanitizeResult;
+      // 使用原始输入的净化结果作为分析数据（provider 返回的歌词已被清理，removedCount=0）
+      const analysisResult = sanitizeResult;
       
       return NextResponse.json({
         taskId: result.task_id,
@@ -131,11 +132,16 @@ export async function POST(request: NextRequest) {
         duration: music.duration,
         lyric: finalLyrics,
         sanitized_lyrics: finalLyrics,
-        lyrics_analysis: finalAnalysis ? {
-          segments: finalAnalysis.segments,
-          removedCount: finalAnalysis.removedCount,
-          removedSamples: finalAnalysis.removedSamples
+        lyrics_analysis: analysisResult ? {
+          segments: analysisResult.segments,
+          removedCount: analysisResult.removedCount,
+          removedSamples: analysisResult.removedSamples
         } : null,
+        // V5.4 spec 要求的驼峰命名字段
+        lyricsSanitize: analysisResult ? {
+          removedCount: analysisResult.removedCount,
+          removedSamples: analysisResult.removedSamples
+        } : { removedCount: 0, removedSamples: [] },
         title: music.title,
         language: language || 'zh',
         vocal_type: vocal_type || 'female',
@@ -161,6 +167,11 @@ export async function POST(request: NextRequest) {
         removedCount: sanitizeResult.removedCount,
         removedSamples: sanitizeResult.removedSamples
       } : null,
+      // V5.4 spec 要求的驼峰命名字段
+      lyricsSanitize: sanitizeResult ? {
+        removedCount: sanitizeResult.removedCount,
+        removedSamples: sanitizeResult.removedSamples
+      } : { removedCount: 0, removedSamples: [] },
       language: language || 'zh',
       vocal_type: vocal_type || 'female',
       mood: mood || null,

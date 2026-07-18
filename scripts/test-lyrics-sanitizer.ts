@@ -168,6 +168,49 @@ console.log('\n=== Test 10: segments 结构验证 ===');
   assertEqual(result[2].raw, '[温柔地]', '第3个raw是[温柔地]');
 }
 
+console.log('\n=== Test 11: V5.4 Hotfix - case3 segments description 计数 ===');
+{
+  const input = '[温柔地]我爱你[停顿][钢琴独奏]';
+  const segs = analyzeLyrics(input);
+  const descriptions = segs.filter(s => s.type === 'description');
+  assertEqual(descriptions.length, 3, 'case3: segments 中恰好有 3 个 description 类型');
+  assertEqual(descriptions[0].raw, '[温柔地]', 'case3: 第1个description是[温柔地]');
+  assertEqual(descriptions[1].raw, '[停顿]', 'case3: 第2个description是[停顿]');
+  assertEqual(descriptions[2].raw, '[钢琴独奏]', 'case3: 第3个description是[钢琴独奏]');
+  
+  const result = sanitizeLyrics(input);
+  assertEqual(result.removedCount, 3, 'case3: removedCount = 3');
+  assertEqual(result.removedSamples, ['[温柔地]', '[停顿]', '[钢琴独奏]'], 'case3: removedSamples 正确');
+}
+
+console.log('\n=== Test 12: V5.4 Hotfix - case4 segments 分类计数 ===');
+{
+  const input = '[Verse 1]\n[女声轻柔]晚风吹过[Chorus]\n[激情]为你歌唱';
+  const segs = analyzeLyrics(input);
+  const structures = segs.filter(s => s.type === 'structure');
+  const descriptions = segs.filter(s => s.type === 'description');
+  assertEqual(structures.length, 2, 'case4: segments 中恰好有 2 个 structure 类型');
+  assertEqual(descriptions.length, 2, 'case4: segments 中恰好有 2 个 description 类型');
+  
+  const result = sanitizeLyrics(input);
+  assertEqual(result.removedCount, 2, 'case4: removedCount = 2');
+  assertEqual(result.removedSamples, ['[女声轻柔]', '[激情]'], 'case4: removedSamples 正确');
+}
+
+console.log('\n=== Test 13: V5.4 Hotfix - e2e 场景 ===');
+{
+  const input = '[Verse]\n晚风吹过[温柔地]你的发梢\n[Chorus][钢琴独奏]\n[女声哼唱]我想为你唱首歌';
+  const segs = analyzeLyrics(input);
+  const structures = segs.filter(s => s.type === 'structure');
+  const descriptions = segs.filter(s => s.type === 'description');
+  assertEqual(structures.length, 2, 'e2e: segments 中恰好有 2 个 structure 类型');
+  assertEqual(descriptions.length, 3, 'e2e: segments 中恰好有 3 个 description 类型');
+  
+  const result = sanitizeLyrics(input);
+  assertEqual(result.removedCount, 3, 'e2e: removedCount = 3');
+  assertEqual(result.removedSamples, ['[温柔地]', '[钢琴独奏]', '[女声哼唱]'], 'e2e: removedSamples 正确');
+}
+
 console.log(`\n========================================`);
 console.log(`Total: ${passed + failed} tests`);
 console.log(`Passed: ${passed}`);

@@ -12,7 +12,7 @@ import { MusicPlayer } from '@/components/music-player';
 import { DeepThinkingLyrics } from '@/components/deep-thinking-lyrics';
 import { Button } from '@/components/ui/button';
 import { Sparkles, Loader2, AlertTriangle } from 'lucide-react';
-import { analyzeLyricsForUI } from '@/lib/lyrics-sanitizer';
+import { analyzeLyrics, type LyricsSegment } from '@/lib/lyrics-sanitizer';
 
 // 模型系列 tab 定义
 const MODEL_TABS = [
@@ -59,18 +59,18 @@ export default function CreatePage() {
   const [generationProgress, setGenerationProgress] = useState(0);
   const [generatedAudioUrl, setGeneratedAudioUrl] = useState<string>();
   const [lyricsAnalysis, setLyricsAnalysis] = useState<{
-    hasBrackets: boolean;
-    bracketTags: string[];
-    warningText: string;
-  }>({ hasBrackets: false, bracketTags: [], warningText: '' });
+    segments: LyricsSegment[];
+    structureCount: number;
+    descriptionCount: number;
+  }>({ segments: [], structureCount: 0, descriptionCount: 0 });
 
   // Auto-analyze lyrics when they change
   useEffect(() => {
-    const analysis = analyzeLyricsForUI(lyrics);
+    const segments = analyzeLyrics(lyrics);
     setLyricsAnalysis({
-      hasBrackets: analysis.hasBrackets,
-      bracketTags: analysis.bracketTags,
-      warningText: analysis.warningText,
+      segments,
+      structureCount: segments.filter(s => s.type === 'structure').length,
+      descriptionCount: segments.filter(s => s.type === 'description').length,
     });
   }, [lyrics]);
 
@@ -157,7 +157,13 @@ export default function CreatePage() {
       if (data.is_demo) {
         toast.success('演示模式', { description: data.message || '当前为演示模式，配置 API Key 后可生成真实音乐' });
       } else {
-        toast.success('音乐生成任务已提交');
+        // 读取歌词净化信息（新字段 lyricsSanitize 优先，兜底老字段 lyrics_analysis）
+        const sanitizeInfo = data.lyricsSanitize || data.lyrics_analysis;
+        const removedCount = sanitizeInfo?.removedCount ?? 0;
+        const toastDesc = removedCount > 0
+          ? `已自动净化 ${removedCount} 处描述词标签`
+          : undefined;
+        toast.success('音乐生成成功', { description: toastDesc });
       }
 
       // Show warning if provider returned one (e.g., version downgrade)
@@ -403,29 +409,37 @@ export default function CreatePage() {
             />
             
             {/* Lyrics Analysis Bar - shows bracket tag warning */}
-            {lyricsAnalysis.hasBrackets && (
+            {(lyricsAnalysis.structureCount > 0 || lyricsAnalysis.descriptionCount > 0) && (
               <div className="glass-card p-3 border-l-2 border-amber-400/60 bg-amber-500/5">
                 <div className="flex items-start gap-2">
                   <AlertTriangle className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-xs text-amber-200/90 leading-relaxed">
-                      {lyricsAnalysis.warningText}
-                    </p>
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {lyricsAnalysis.bracketTags.slice(0, 8).map((tag, i) => (
-                        <span
-                          key={i}
-                          className="inline-block px-1.5 py-0.5 text-[10px] font-mono bg-amber-400/10 text-amber-300 rounded"
-                        >
-                          [{tag}]
-                        </span>
-                      ))}
-                      {lyricsAnalysis.bracketTags.length > 8 && (
-                        <span className="inline-block px-1.5 py-0.5 text-[10px] text-amber-400/60">
-                          +{lyricsAnalysis.bracketTags.length - 8}
-                        </span>
+                      ✅ 保留 {lyricsAnalysis.structureCount} 处结构标签
+                      {lyricsAnalysis.descriptionCount > 0 && (
+                        <>  ✂️ 将净化 {lyricsAnalysis.descriptionCount} 处描述词</>
                       )}
-                    </div>
+                    </p>
+                    {lyricsAnalysis.descriptionCount > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {lyricsAnalysis.segments
+                          .filter(s => s.type === 'description')
+                          .slice(0, 8)
+                          .map((seg, i) => (
+                            <span
+                              key={i}
+                              className="inline-block px-1.5 py-0.5 text-[10px] font-mono bg-red-400/10 text-red-300 rounded line-through"
+                            >
+                              {seg.raw}
+                            </span>
+                          ))}
+                        {lyricsAnalysis.descriptionCount > 8 && (
+                          <span className="inline-block px-1.5 py-0.5 text-[10px] text-amber-400/60">
+                            +{lyricsAnalysis.descriptionCount - 8}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
