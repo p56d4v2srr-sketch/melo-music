@@ -41,7 +41,7 @@ const SUNO_VERSIONS = SUNO_VERSION_DATA.map(v => ({
   key: v.value,
   name: v.label,
   desc: v.desc,
-  credits: '5 积分/首',
+  credits: '5 积分 / 2 首',
   badge: v.value === DEFAULT_SUNO_VERSION ? '默认' : null,
 }));
 
