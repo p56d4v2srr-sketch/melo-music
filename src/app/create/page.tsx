@@ -18,6 +18,7 @@ import { analyzeLyrics, type LyricsSegment } from '@/lib/lyrics-sanitizer';
 const PROVIDER_TABS = [
   { key: 'minimax', name: 'MiniMax · 快', subtitle: '~1min · 免费', enabled: true },
   { key: 'pule', name: 'PuLe · 精品', subtitle: '~90s · ¥0.3/首 · 5min · 时间戳歌词', enabled: true },
+  { key: 'suno', name: 'Suno · 欧美 v5.5', subtitle: '~60-90s · 2 首供选 · 流式播放 · 中英日多语', enabled: true },
 ];
 
 // 模型系列 tab 定义
@@ -45,7 +46,28 @@ const MINIMAX_VERSIONS = [
 
 export default function CreatePage() {
   // Provider state
-  const [activeProvider, setActiveProvider] = useState<'minimax' | 'pule'>('minimax');
+  const [activeProvider, setActiveProvider] = useState<'minimax' | 'pule' | 'suno'>('minimax');
+  
+  // Suno-specific state
+  const [sunoMode, setSunoMode] = useState<'prompt' | 'custom'>('custom');
+  const [sunoSongIds, setSunoSongIds] = useState<string[]>([]);
+  const [sunoSongs, setSunoSongs] = useState<Array<{
+    id: string;
+    status: 'pending' | 'processing' | 'succeeded' | 'failed' | string;
+    title?: string;
+    audio_url?: string;
+    image_url?: string;
+    lyric?: string;
+    tags?: string;
+    duration?: number;
+    model_name?: string;
+  }>>([]);
+  const [sunoPollingStatus, setSunoPollingStatus] = useState<'idle' | 'submitted' | 'polling' | 'succeeded' | 'failed'>('idle');
+  const [sunoPollingMessage, setSunoPollingMessage] = useState('');
+  // Suno prompt mode input
+  const [sunoPrompt, setSunoPrompt] = useState('');
+  // Suno custom mode tags
+  const [sunoTags, setSunoTags] = useState('');
   
   // State
   const [activeModelTab, setActiveModelTab] = useState('minimax');
@@ -184,6 +206,110 @@ export default function CreatePage() {
     };
   }, [pulePollingStatus, puleItemIds, generatedAudioUrl]);
 
+  // Suno polling logic
+  useEffect(() => {
+    if (sunoPollingStatus !== 'polling' || sunoSongIds.length === 0) return;
+
+    let pollTimer: NodeJS.Timeout;
+    let startTime = Date.now();
+    const POLL_INTERVAL = 3000; // 3s
+    const POLL_TIMEOUT = 300000; // 5min
+    const INITIAL_DELAY = 20000; // 20s before first poll
+
+    const poll = async () => {
+      const elapsed = Date.now() - startTime;
+      
+      // Check timeout
+      if (elapsed > POLL_TIMEOUT) {
+        setSunoPollingStatus('failed');
+        setSunoPollingMessage('生成超时，请重试');
+        toast.error('Suno 生成超时', { description: '已超过 5 分钟，请重试' });
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/suno-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ song_ids: sunoSongIds }),
+        });
+
+        const data = await res.json();
+
+        if (!data.ok) {
+          throw new Error(data.message || '查询失败');
+        }
+
+        setSunoSongs(data.songs);
+
+        // Check status of all songs
+        const allSucceeded = data.songs.every((s: { status: string }) => s.status === 'succeeded');
+        const allDone = data.songs.every((s: { status: string }) => 
+          s.status === 'succeeded' || s.status === 'failed'
+        );
+        const anyProcessing = data.songs.some((s: { status: string }) => 
+          s.status === 'processing' || s.status === 'succeeded'
+        );
+        const anyFailed = data.songs.some((s: { status: string }) => s.status === 'failed');
+
+        if (allSucceeded) {
+          setSunoPollingStatus('succeeded');
+          setSunoPollingMessage('全部生成完成');
+          // Use the first succeeded song's audio_url
+          const succeededSong = data.songs.find((s: { status: string }) => s.status === 'succeeded');
+          if (succeededSong?.audio_url) {
+            setGeneratedAudioUrl(succeededSong.audio_url);
+          }
+          toast.success('Suno 生成完成', { description: `${data.songs.length} 首歌曲已就绪` });
+        } else if (allDone) {
+          // Some succeeded, some failed
+          setSunoPollingStatus('succeeded');
+          const successCount = data.songs.filter((s: { status: string }) => s.status === 'succeeded').length;
+          setSunoPollingMessage(`${successCount}/${data.songs.length} 首成功`);
+          const succeededSong = data.songs.find((s: { status: string }) => s.status === 'succeeded');
+          if (succeededSong?.audio_url) {
+            setGeneratedAudioUrl(succeededSong.audio_url);
+          }
+          toast.warning('部分歌曲生成失败', { description: `${successCount} 首成功，${data.songs.length - successCount} 首失败` });
+        } else if (anyProcessing && !anyFailed) {
+          // Processing available, continue polling
+          const processingCount = data.songs.filter((s: { status: string }) => s.status === 'processing').length;
+          const succeededCount = data.songs.filter((s: { status: string }) => s.status === 'succeeded').length;
+          setSunoPollingMessage(`生成中...（${succeededCount} 完成, ${processingCount} 处理中）`);
+          
+          // If we have a processing song with audio_url, use it for streaming
+          const processingSong = data.songs.find((s: { status: string; audio_url?: string }) => s.status === 'processing' && s.audio_url);
+          if (processingSong?.audio_url && !generatedAudioUrl) {
+            setGeneratedAudioUrl(processingSong.audio_url);
+          }
+          
+          pollTimer = setTimeout(poll, POLL_INTERVAL);
+        } else if (anyFailed) {
+          setSunoPollingStatus('failed');
+          setSunoPollingMessage('生成失败');
+          toast.error('Suno 生成失败', { description: '部分歌曲生成失败，请重试' });
+        } else {
+          // Still pending, continue polling
+          setSunoPollingMessage('任务排队中...');
+          pollTimer = setTimeout(poll, POLL_INTERVAL);
+        }
+      } catch (err) {
+        console.error('[Suno] Poll error:', err);
+        // Continue polling on transient errors
+        pollTimer = setTimeout(poll, POLL_INTERVAL);
+      }
+    };
+
+    // Initial delay before first poll
+    const initialTimer = setTimeout(poll, INITIAL_DELAY);
+    setSunoPollingMessage('已提交任务，等待 20 秒后开始查询...');
+
+    return () => {
+      clearTimeout(initialTimer);
+      clearTimeout(pollTimer);
+    };
+  }, [sunoPollingStatus, sunoSongIds, generatedAudioUrl]);
+
   const handleModelTabClick = (tabKey: string) => {
     const tab = MODEL_TABS.find(t => t.key === tabKey);
     if (!tab?.enabled) {
@@ -207,6 +333,11 @@ export default function CreatePage() {
     // Route to PuLe if selected
     if (activeProvider === 'pule') {
       return handleGeneratePule();
+    }
+
+    // Route to Suno if selected
+    if (activeProvider === 'suno') {
+      return handleGenerateSuno();
     }
 
     // MiniMax flow (existing logic)
@@ -366,6 +497,89 @@ export default function CreatePage() {
     }
   };
 
+  // Suno generate handler
+  const handleGenerateSuno = async () => {
+    setIsGenerating(true);
+    setGenerationProgress(0);
+    setGeneratedAudioUrl(undefined);
+    setSunoSongs([]);
+    setSunoSongIds([]);
+    setSunoPollingStatus('idle');
+    setSunoPollingMessage('');
+
+    try {
+      const isCustomMode = sunoMode === 'custom';
+      
+      // Build request body
+      const body: Record<string, unknown> = {
+        mode: sunoMode,
+        model: 'chirp-v5.5',
+        instrumental: vocalType === 'instrumental',
+      };
+
+      if (isCustomMode) {
+        // Custom mode: title + tags + lyrics
+        body.title = songTitle || 'Untitled Melo';
+        body.tags = selectedStyles.length > 0 ? selectedStyles.join(', ') : 'pop, chinese';
+        body.lyrics = lyrics || undefined;
+      } else {
+        // Prompt mode: just prompt
+        const prompt = [
+          description,
+          selectedStyles.length > 0 ? `风格：${selectedStyles.join(', ')}` : '',
+          vocalType === 'male' ? '男声' : vocalType === 'female' ? '女声' : '',
+          mood ? `情绪：${mood}` : '',
+        ].filter(Boolean).join('，');
+        body.prompt = prompt || '温暖治愈的中文流行';
+      }
+
+      const response = await fetch('/api/suno-generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      const data = await response.json();
+
+      if (!data.ok) {
+        const code = data.code || 'UNKNOWN';
+        const message = data.message || '生成失败';
+        
+        if (code === 'INSUFFICIENT_BALANCE') {
+          toast.error('Suno 余额不足', { description: '请去 https://api.yourmusic.fun/dashboard 充值' });
+        } else if (code === 'AUTH_ERROR') {
+          toast.error('Suno 认证失败', { description: 'API Key 无效' });
+        } else if (code === 'EMPTY_LYRICS') {
+          toast.error('歌词为空', { description: '非纯音乐模式必须提供歌词' });
+        } else {
+          toast.error('Suno 生成失败', { description: message });
+        }
+        setIsGenerating(false);
+        return;
+      }
+
+      // Success - got songs
+      const songs = data.songs || [];
+      setSunoSongs(songs);
+      setSunoSongIds(songs.map((s: { id: string }) => s.id));
+      setSunoPollingStatus('polling');
+      setGenerationProgress(10);
+      
+      const sanitizeInfo = data.lyricsSanitize;
+      const removedCount = sanitizeInfo?.removedCount ?? 0;
+      const toastDesc = removedCount > 0
+        ? `已提交 ${songs.length} 首，净化 ${removedCount} 处描述词`
+        : `已提交 ${songs.length} 首`;
+      toast.success('Suno 任务已提交', { description: toastDesc });
+
+    } catch (error) {
+      console.error('[Suno] Generate error:', error);
+      toast.error('Suno 生成失败', { description: '网络异常，请检查网络连接后重试' });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const handleVoiceUpload = (voice: VoiceFile) => {
     setUploadedVoices([...uploadedVoices, voice]);
   };
@@ -404,7 +618,7 @@ export default function CreatePage() {
                 key={tab.key}
                 onClick={() => {
                   if (tab.enabled) {
-                    setActiveProvider(tab.key as 'minimax' | 'pule');
+                    setActiveProvider(tab.key as 'minimax' | 'pule' | 'suno');
                   }
                 }}
                 className={`
@@ -718,6 +932,72 @@ export default function CreatePage() {
                            song.status === 'running' ? '生成中' :
                            '失败'}
                         </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Suno Status Display */}
+            {activeProvider === 'suno' && sunoPollingStatus !== 'idle' && (
+              <div className="glass-card p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  {sunoPollingStatus === 'polling' && (
+                    <Loader2 className="w-4 h-4 text-amber-400 animate-spin" />
+                  )}
+                  {sunoPollingStatus === 'succeeded' && (
+                    <span className="w-4 h-4 rounded-full bg-green-500/20 flex items-center justify-center">
+                      <span className="w-2 h-2 rounded-full bg-green-500" />
+                    </span>
+                  )}
+                  {sunoPollingStatus === 'failed' && (
+                    <AlertTriangle className="w-4 h-4 text-red-400" />
+                  )}
+                  <span className="text-sm font-medium text-foreground">
+                    {sunoPollingStatus === 'polling' && '生成中'}
+                    {sunoPollingStatus === 'succeeded' && '生成完成'}
+                    {sunoPollingStatus === 'failed' && '生成失败'}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground mb-3">
+                  {sunoPollingMessage}
+                </p>
+                
+                {/* Song status cards */}
+                {sunoSongs.length > 0 && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {sunoSongs.map((song, idx) => (
+                      <div key={song.id || idx} className="p-3 rounded-lg bg-white/5 border border-white/10">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium text-foreground truncate">
+                            {song.title || `歌曲 ${idx + 1}`}
+                          </span>
+                          <span className={`text-xs px-2 py-0.5 rounded ${
+                            song.status === 'succeeded' ? 'bg-green-500/20 text-green-400' :
+                            song.status === 'processing' ? 'bg-amber-500/20 text-amber-400' :
+                            song.status === 'pending' ? 'bg-blue-500/20 text-blue-400' :
+                            'bg-red-500/20 text-red-400'
+                          }`}>
+                            {song.status === 'succeeded' ? '完成' :
+                             song.status === 'processing' ? '处理中' :
+                             song.status === 'pending' ? '等待中' :
+                             '失败'}
+                          </span>
+                        </div>
+                        {song.audio_url && (
+                          <audio 
+                            key={song.audio_url}
+                            controls 
+                            className="w-full h-8"
+                            src={song.audio_url}
+                          />
+                        )}
+                        {song.duration && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            时长: {Math.floor(song.duration / 60)}:{(song.duration % 60).toString().padStart(2, '0')}
+                          </p>
+                        )}
                       </div>
                     ))}
                   </div>
