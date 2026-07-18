@@ -24,6 +24,11 @@ export type MiniMaxModelValue = typeof MINIMAX_MODELS[number]['value'];
  * PuLe（天谱乐 tianpuyue.cn）模型
  * V5.8: 实测有效 model 字面串为 'TemPolor v4.5'（v4.6 不存在，上游返回 400003）
  * 其他有效值：'TemPolor v4.0'、'TemPolor v3.5'、'TemPolor v3'
+ * 
+ * ⚠️ V5.8+ 状态：2026-07 实测所有模型（含 v4.5/v4.0/v3.5/v3）均返回 400003 "model not support"
+ * API Key 仍有效（query 接口正常），但 generate 接口所有模型名被拒。
+ * 可能原因：上游服务升级/模型下线/API Key 权限变更。需联系天谱乐确认。
+ * V4.7 同样不可用（尝试了 tempolor-v4.7 / TemPolor-V4.7 / v4.7 等变体）。
  */
 export const PULE_MODEL = 'TemPolor v4.5' as const;
 
