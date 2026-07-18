@@ -1,7 +1,7 @@
 /**
  * Music Provider 抽象层
  * 定义统一的音乐生成接口，支持多 provider 扩展
- * 当前仅实装 AceData，未来接入新 provider 时在 getMusicProvider() 加分支
+ * 支持 AceData 和 DMXAPI 两个 provider，通过 MUSIC_PROVIDER 环境变量切换
  */
 
 export interface GenerateParams {
@@ -53,10 +53,18 @@ export interface MusicProvider {
   queryTask(taskId: string): Promise<ProviderTaskStatus>;
 }
 
-// 单实装工厂：目前只有 AceData
-// 未来接入新 provider 时再在这里加分支
+// 工厂：根据 MUSIC_PROVIDER 环境变量切换 provider
+// 'dmxapi'  → DmxApiProvider（需 DMXAPI_API_KEY）
+// 其他/未设置 → AceDataProvider（默认，需 ACEDATA_API_KEY）
+// 演示模式（两个 Key 都缺）由 API route 层判断，此处按环境变量选择实装
 export function getMusicProvider(): MusicProvider {
-  // 延迟导入避免循环依赖
+  const provider = (process.env.MUSIC_PROVIDER || '').toLowerCase().trim();
+  if (provider === 'dmxapi') {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { DmxApiProvider } = require('./dmxapi');
+    return new DmxApiProvider();
+  }
+  // 默认走 AceData（保留冗余）
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { AceDataProvider } = require('./acedata');
   return new AceDataProvider();
