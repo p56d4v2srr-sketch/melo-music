@@ -11,11 +11,15 @@ import { VoiceUpload, type VoiceFile } from '@/components/voice-upload';
 import { MusicPlayer } from '@/components/music-player';
 import { DeepThinkingLyrics } from '@/components/deep-thinking-lyrics';
 import { Button } from '@/components/ui/button';
-import { Sparkles, Loader2, AlertTriangle } from 'lucide-react';
+import { Sparkles, Loader2, AlertTriangle, Library, Mic2 } from 'lucide-react';
 import { analyzeLyrics, type SanitizeResult } from '@/lib/lyrics-sanitizer';
 import { useToggleSelection } from '@/hooks/useToggleSelection';
 import { useMultiToggleSelection } from '@/hooks/useMultiToggleSelection';
 import { SELECTION_STYLES } from '@/lib/ui-tokens';
+import { GenreLibraryDrawer } from '@/components/genre-library-drawer';
+import { ArtistLibraryDrawer } from '@/components/artist-library-drawer';
+import { GENRES } from '@/data/genres';
+import { ARTISTS, getArtistById } from '@/data/artists';
 
 // Provider tab 定义（顶层切换）
 const PROVIDER_TABS = [
@@ -71,6 +75,12 @@ export default function CreatePage() {
   
   // ========== Suno advanced options panel ==========
   const [sunoAdvancedOpen, setSunoAdvancedOpen] = useState(false);
+
+  // ========== Genre & Artist Library Drawers ==========
+  const [genreDrawerOpen, setGenreDrawerOpen] = useState(false);
+  const [artistDrawerOpen, setArtistDrawerOpen] = useState(false);
+  const [selectedGenreIds, setSelectedGenreIds] = useState<number[]>([]);
+  const [selectedArtistIds, setSelectedArtistIds] = useState<number[]>([]);
   
   // ========== Suno-specific state ==========
   const [sunoMode, setSunoMode] = useState<'prompt' | 'custom'>('custom');
@@ -933,14 +943,42 @@ export default function CreatePage() {
         <div className={`grid grid-cols-1 lg:grid-cols-12 gap-6 ${!provider.value ? 'opacity-40 pointer-events-none select-none' : ''}`}>
           {/* Left Column - Parameters */}
           <div className="lg:col-span-3 space-y-6">
-            <MusicStyleSelector
-              selectedStyles={selectedStyles}
-              onSelectionChange={setSelectedStyles}
-            />
-            <SingerStyleSelector
-              selectedSingers={selectedSingers}
-              onSelectionChange={setSelectedSingers}
-            />
+            <div>
+              <MusicStyleSelector
+                selectedStyles={selectedStyles}
+                onSelectionChange={setSelectedStyles}
+              />
+              <button
+                onClick={() => setGenreDrawerOpen(true)}
+                className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs bg-gradient-to-r from-amber-400/10 to-purple-500/10 text-amber-400 border border-amber-400/30 hover:border-amber-400/50 transition-all"
+              >
+                <Library className="w-3.5 h-3.5" />
+                打开曲风库（135 种）
+                {selectedGenreIds.length > 0 && (
+                  <span className="ml-1 px-1.5 py-0.5 rounded bg-amber-400/20 text-[10px]">
+                    已选 {selectedGenreIds.length}
+                  </span>
+                )}
+              </button>
+            </div>
+            <div>
+              <SingerStyleSelector
+                selectedSingers={selectedSingers}
+                onSelectionChange={setSelectedSingers}
+              />
+              <button
+                onClick={() => setArtistDrawerOpen(true)}
+                className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs bg-gradient-to-r from-purple-500/10 to-amber-400/10 text-purple-300 border border-purple-500/30 hover:border-purple-500/50 transition-all"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                打开歌手库（500 位）
+                {selectedArtistIds.length > 0 && (
+                  <span className="ml-1 px-1.5 py-0.5 rounded bg-purple-500/20 text-[10px]">
+                    已选 {selectedArtistIds.length}
+                  </span>
+                )}
+              </button>
+            </div>
             <VoiceUpload
               uploadedVoices={uploadedVoices}
               onUpload={handleVoiceUpload}
@@ -1204,6 +1242,22 @@ export default function CreatePage() {
           </div>
         </div>
       </main>
+
+      {/* Genre Library Drawer */}
+      <GenreLibraryDrawer
+        open={genreDrawerOpen}
+        onClose={() => setGenreDrawerOpen(false)}
+        selectedGenreIds={selectedGenreIds}
+        onSelectionChange={setSelectedGenreIds}
+      />
+
+      {/* Artist Library Drawer */}
+      <ArtistLibraryDrawer
+        open={artistDrawerOpen}
+        onClose={() => setArtistDrawerOpen(false)}
+        selectedArtistIds={selectedArtistIds}
+        onSelectionChange={setSelectedArtistIds}
+      />
     </div>
   );
 }
