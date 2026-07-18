@@ -13,6 +13,9 @@ import { DeepThinkingLyrics } from '@/components/deep-thinking-lyrics';
 import { Button } from '@/components/ui/button';
 import { Sparkles, Loader2, AlertTriangle } from 'lucide-react';
 import { analyzeLyrics, type LyricsSegment } from '@/lib/lyrics-sanitizer';
+import { useToggleSelection } from '@/hooks/useToggleSelection';
+import { useMultiToggleSelection } from '@/hooks/useMultiToggleSelection';
+import { SELECTION_STYLES } from '@/lib/ui-tokens';
 
 // Provider tab 定义（顶层切换）
 const PROVIDER_TABS = [
@@ -31,7 +34,7 @@ const MODEL_TABS = [
 ];
 
 // Suno 版本定义 - 使用 constants.ts 中的上游探测结果
-import { SUNO_VERSIONS as SUNO_VERSION_DATA, DEFAULT_SUNO_VERSION, MAX_TIMBRE_CHIP_SELECTED } from '@/lib/constants';
+import { SUNO_VERSIONS as SUNO_VERSION_DATA, DEFAULT_SUNO_VERSION, MAX_TIMBRE_CHIP_SELECTED, PULE_MODEL } from '@/lib/constants';
 import { VOCAL_TIMBRES } from '@/data/vocal-timbres';
 
 const SUNO_VERSIONS = SUNO_VERSION_DATA.map(v => ({
@@ -48,10 +51,28 @@ const MINIMAX_VERSIONS = [
 ];
 
 export default function CreatePage() {
-  // Provider state
-  const [activeProvider, setActiveProvider] = useState<'minimax' | 'pule' | 'suno' | null>(null);
+  // ========== Provider state (useToggleSelection) ==========
+  const provider = useToggleSelection<'minimax' | 'pule' | 'suno'>();
   
-  // Suno-specific state
+  // ========== MiniMax sub-model (useToggleSelection, 必选组) ==========
+  const miniMaxModel = useToggleSelection<'music-2.0'>('music-2.0');
+  
+  // ========== PuLe sub-model (useToggleSelection, 必选组) ==========
+  const puleModel = useToggleSelection<string>(PULE_MODEL);
+  
+  // ========== Suno version (useToggleSelection, 必选组) ==========
+  const sunoVersion = useToggleSelection<string>(DEFAULT_SUNO_VERSION);
+  
+  // ========== Suno vocal gender (useToggleSelection, 可选组) ==========
+  const gender = useToggleSelection<'male' | 'female' | 'duet' | 'instrumental'>();
+  
+  // ========== Suno timbre chips (useMultiToggleSelection, 可选组, max 3) ==========
+  const timbres = useMultiToggleSelection<string>(MAX_TIMBRE_CHIP_SELECTED);
+  
+  // ========== Suno advanced options panel ==========
+  const [sunoAdvancedOpen, setSunoAdvancedOpen] = useState(false);
+  
+  // ========== Suno-specific state ==========
   const [sunoMode, setSunoMode] = useState<'prompt' | 'custom'>('custom');
   const [sunoSongIds, setSunoSongIds] = useState<string[]>([]);
   const [sunoSongs, setSunoSongs] = useState<Array<{
@@ -71,15 +92,8 @@ export default function CreatePage() {
   const [sunoPrompt, setSunoPrompt] = useState('');
   // Suno custom mode tags
   const [sunoTags, setSunoTags] = useState('');
-  // Suno advanced options state
-  const [sunoVersion, setSunoVersion] = useState<string>(DEFAULT_SUNO_VERSION);
-  const [sunoVocalGender, setSunoVocalGender] = useState<'male' | 'female' | 'duet' | 'instrumental' | null>(null);
-  const [sunoTimbres, setSunoTimbres] = useState<string[]>([]);
-  const [sunoAdvancedOpen, setSunoAdvancedOpen] = useState(false);
   
-  // State
-  const [activeModelTab, setActiveModelTab] = useState('minimax');
-  const [selectedModelVersion, setSelectedModelVersion] = useState('music-2.0');
+  // ========== Legacy state (kept for compatibility) ==========
   const [songTitle, setSongTitle] = useState('');
   const [songDuration, setSongDuration] = useState(300); // 默认 5 分钟（300秒）
   const [language, setLanguage] = useState('zh');
@@ -324,11 +338,11 @@ export default function CreatePage() {
       toast.info('敬请期待', { description: `${tab?.name} 即将上线` });
       return;
     }
-    setActiveModelTab(tabKey);
+    provider.toggle(tabKey as 'minimax' | 'pule' | 'suno');
   };
 
   const handleGenerate = async () => {
-    if (!activeProvider) {
+    if (!provider.value) {
       toast.error('请先选择一个模型');
       return;
     }
@@ -344,12 +358,12 @@ export default function CreatePage() {
     }
 
     // Route to PuLe if selected
-    if (activeProvider === 'pule') {
+    if (provider.value === 'pule') {
       return handleGeneratePule();
     }
 
     // Route to Suno if selected
-    if (activeProvider === 'suno') {
+    if (provider.value === 'suno') {
       return handleGenerateSuno();
     }
 
@@ -387,7 +401,7 @@ export default function CreatePage() {
           description,
           lyrics,
           voiceId: selectedVoice,
-          model_version: selectedModelVersion,
+          model_version: miniMaxModel.value,
         }),
       });
 
@@ -468,7 +482,7 @@ export default function CreatePage() {
           lyrics: lyrics || undefined,
           instrumental: vocalType === 'instrumental',
           // V5.8: 使用实测有效的 model 字面串
-          model: 'TemPolor v4.5',
+          model: puleModel.value || 'TemPolor v4.5',
         }),
       });
 
@@ -527,13 +541,13 @@ export default function CreatePage() {
       // Build request body
       const body: Record<string, unknown> = {
         mode: sunoMode,
-        version: sunoVersion,
-        instrumental: sunoVocalGender === 'instrumental' || vocalType === 'instrumental',
+        version: sunoVersion.value || DEFAULT_SUNO_VERSION,
+        instrumental: gender.value === 'instrumental' || vocalType === 'instrumental',
       };
 
       // Vocal gender (only pass if explicitly selected and not instrumental/duet)
-      if (sunoVocalGender === 'male' || sunoVocalGender === 'female') {
-        body.vocal_gender = sunoVocalGender;
+      if (gender.value === 'male' || gender.value === 'female') {
+        body.vocal_gender = gender.value;
       }
 
       if (isCustomMode) {
@@ -543,8 +557,8 @@ export default function CreatePage() {
         const tagParts: string[] = [];
         if (selectedStyles.length > 0) tagParts.push(selectedStyles.join(', '));
         else tagParts.push('pop, chinese');
-        if (sunoVocalGender === 'duet') tagParts.push('male & female duet');
-        if (sunoTimbres.length > 0) tagParts.push(sunoTimbres.join(', '));
+        if (gender.value === 'duet') tagParts.push('male & female duet');
+        if (timbres.values.length > 0) tagParts.push(timbres.values.join(', '));
         body.tags = tagParts.join(', ');
         body.lyrics = lyrics || undefined;
       } else {
@@ -552,11 +566,11 @@ export default function CreatePage() {
         const promptParts: string[] = [];
         if (description) promptParts.push(description);
         if (selectedStyles.length > 0) promptParts.push(`风格：${selectedStyles.join(', ')}`);
-        if (sunoVocalGender === 'male' || vocalType === 'male') promptParts.push('男声');
-        else if (sunoVocalGender === 'female' || vocalType === 'female') promptParts.push('女声');
-        else if (sunoVocalGender === 'duet') promptParts.push('男女对唱');
+        if (gender.value === 'male' || vocalType === 'male') promptParts.push('男声');
+        else if (gender.value === 'female' || vocalType === 'female') promptParts.push('女声');
+        else if (gender.value === 'duet') promptParts.push('男女对唱');
         if (mood) promptParts.push(`情绪：${mood}`);
-        if (sunoTimbres.length > 0) promptParts.push(`音色：${sunoTimbres.join(', ')}`);
+        if (timbres.values.length > 0) promptParts.push(`音色：${timbres.values.join(', ')}`);
         const prompt = promptParts.filter(Boolean).join('，');
         body.prompt = prompt || '温暖治愈的中文流行';
       }
@@ -649,20 +663,19 @@ export default function CreatePage() {
                 key={tab.key}
                 onClick={() => {
                   if (tab.enabled) {
-                    // Toggle: click selected tab to deselect
-                    setActiveProvider(prev => prev === tab.key ? null : tab.key as 'minimax' | 'pule' | 'suno');
+                    provider.toggle(tab.key as 'minimax' | 'pule' | 'suno');
                   }
                 }}
                 className={`
                   relative flex-1 max-w-xs px-5 py-3 rounded-xl transition-all text-left
-                  ${!tab.enabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-                  ${activeProvider === tab.key && tab.enabled
-                    ? 'border-2 border-amber-400 bg-amber-400/5 shadow-[0_0_20px_rgba(212,175,55,0.15)]'
-                    : 'border border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20'
+                  ${!tab.enabled ? SELECTION_STYLES.disabled : 'cursor-pointer'}
+                  ${provider.value === tab.key && tab.enabled
+                    ? SELECTION_STYLES.selected
+                    : SELECTION_STYLES.unselected
                   }
                 `}
               >
-                <h3 className={`text-sm font-bold mb-0.5 ${activeProvider === tab.key ? 'text-amber-400' : 'text-foreground'}`}>
+                <h3 className={`text-sm font-bold mb-0.5 ${provider.value === tab.key ? 'text-amber-400' : 'text-foreground'}`}>
                   {tab.name}
                 </h3>
                 <p className="text-xs text-muted-foreground">
@@ -674,19 +687,23 @@ export default function CreatePage() {
         </div>
 
         {/* Model Series Tabs (only show for MiniMax provider) */}
-        {activeProvider === 'minimax' && (
+        {provider.value === 'minimax' && (
         <div className="mb-6">
           <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
             {MODEL_TABS.map((tab) => (
               <button
                 key={tab.key}
-                onClick={() => handleModelTabClick(tab.key)}
+                onClick={() => {
+                  if (tab.enabled) {
+                    miniMaxModel.toggle(tab.key as 'music-2.0');
+                  }
+                }}
                 className={`
                   relative px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all
-                  ${!tab.enabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-                  ${activeModelTab === tab.key && tab.enabled
-                    ? 'text-amber-400 bg-amber-400/10 border border-amber-400/30 shadow-[0_0_12px_rgba(212,175,55,0.2)]'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+                  ${!tab.enabled ? SELECTION_STYLES.disabled : 'cursor-pointer'}
+                  ${miniMaxModel.value === tab.key && tab.enabled
+                    ? SELECTION_STYLES.selected
+                    : SELECTION_STYLES.unselected
                   }
                 `}
               >
@@ -703,18 +720,18 @@ export default function CreatePage() {
         )}
 
         {/* Suno Version Cards (only show when Suno tab is active) */}
-        {activeModelTab === 'suno' && (
+        {provider.value === 'suno' && (
           <div className="mb-6">
             <div className="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-hide">
               {SUNO_VERSIONS.map((version) => (
                 <button
                   key={version.key}
-                  onClick={() => setSelectedModelVersion(version.key)}
+                  onClick={() => sunoVersion.toggle(version.key as typeof SUNO_VERSIONS[number]['key'])}
                   className={`
                     relative flex-shrink-0 w-48 p-4 rounded-xl transition-all text-left
-                    ${selectedModelVersion === version.key
-                      ? 'border-2 border-amber-400 bg-amber-400/5 shadow-[0_0_20px_rgba(212,175,55,0.15)]'
-                      : 'border border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20'
+                    ${sunoVersion.value === version.key
+                      ? SELECTION_STYLES.selected
+                      : SELECTION_STYLES.unselected
                     }
                   `}
                 >
@@ -732,7 +749,7 @@ export default function CreatePage() {
                   )}
                   
                   {/* Version Name */}
-                  <h3 className={`text-sm font-bold mb-1 ${selectedModelVersion === version.key ? 'text-amber-400' : 'text-foreground'}`}>
+                  <h3 className={`text-sm font-bold mb-1 ${sunoVersion.value === version.key ? 'text-amber-400' : 'text-foreground'}`}>
                     {version.name}
                   </h3>
                   
@@ -752,7 +769,7 @@ export default function CreatePage() {
         )}
 
         {/* Suno Advanced Options (only show when Suno tab is active) */}
-        {activeModelTab === 'suno' && (
+        {provider.value === 'suno' && (
           <div className="mb-6 space-y-4">
             {/* Collapsible Advanced Options */}
             <button
@@ -761,7 +778,7 @@ export default function CreatePage() {
             >
               <span className={`transition-transform ${sunoAdvancedOpen ? 'rotate-90' : ''}`}>▶</span>
               高级选项
-              {(sunoVocalGender || sunoTimbres.length > 0) && (
+              {(gender.value || timbres.values.length > 0) && (
                 <span className="px-1.5 py-0.5 rounded bg-amber-400/10 text-amber-400 text-[10px]">
                   已配置
                 </span>
@@ -782,10 +799,10 @@ export default function CreatePage() {
                     ].map((opt) => (
                       <button
                         key={opt.value}
-                        onClick={() => setSunoVocalGender(sunoVocalGender === opt.value ? null : opt.value)}
+                        onClick={() => gender.toggle(opt.value)}
                         className={`
                           px-3 py-1.5 rounded-lg text-sm transition-all
-                          ${sunoVocalGender === opt.value
+                          ${gender.value === opt.value
                             ? 'bg-amber-400/20 text-amber-400 border border-amber-400/50'
                             : 'bg-white/5 text-muted-foreground border border-white/10 hover:bg-white/10'
                           }
@@ -805,16 +822,16 @@ export default function CreatePage() {
                   </label>
                   <div className="flex flex-wrap gap-2">
                     {VOCAL_TIMBRES.map((timb) => {
-                      const isSelected = sunoTimbres.includes(timb.tag);
-                      const isDisabled = !isSelected && sunoTimbres.length >= MAX_TIMBRE_CHIP_SELECTED;
+                      const isSelected = timbres.values.includes(timb.tag);
+                      const isDisabled = !isSelected && timbres.values.length >= MAX_TIMBRE_CHIP_SELECTED;
                       return (
                         <button
                           key={timb.tag}
                           onClick={() => {
                             if (isSelected) {
-                              setSunoTimbres(sunoTimbres.filter(t => t !== timb.tag));
+                              timbres.toggle(timb.tag);
                             } else if (!isDisabled) {
-                              setSunoTimbres([...sunoTimbres, timb.tag]);
+                              timbres.toggle(timb.tag);
                             }
                           }}
                           disabled={isDisabled}
@@ -858,16 +875,16 @@ export default function CreatePage() {
         )}
 
         {/* MiniMax Version Cards (only show when MiniMax tab is active) */}
-        {activeModelTab === 'minimax' && (
+        {provider.value === 'minimax' && (
           <div className="mb-6">
             <div className="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-hide">
               {MINIMAX_VERSIONS.map((version) => (
                 <button
                   key={version.key}
-                  onClick={() => setSelectedModelVersion(version.key)}
+                  onClick={() => sunoVersion.toggle(version.key)}
                   className={`
                     relative flex-shrink-0 w-64 p-4 rounded-xl transition-all text-left
-                    ${selectedModelVersion === version.key
+                    ${sunoVersion.value === version.key
                       ? 'border-2 border-amber-400 bg-amber-400/5 shadow-[0_0_20px_rgba(212,175,55,0.15)]'
                       : 'border border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20'
                     }
@@ -884,7 +901,7 @@ export default function CreatePage() {
                   )}
                   
                   {/* Version Name */}
-                  <h3 className={`text-sm font-bold mb-1 ${selectedModelVersion === version.key ? 'text-amber-400' : 'text-foreground'}`}>
+                  <h3 className={`text-sm font-bold mb-1 ${sunoVersion.value === version.key ? 'text-amber-400' : 'text-foreground'}`}>
                     {version.name}
                   </h3>
                   
@@ -904,7 +921,7 @@ export default function CreatePage() {
         )}
 
         {/* Hint when no provider selected */}
-        {!activeProvider && (
+        {!provider.value && (
           <div className="mb-6 text-center py-8 glass-card rounded-xl">
             <p className="text-lg text-muted-foreground">👆 请先选择一个模型</p>
             <p className="text-sm text-muted-foreground/60 mt-2">点击上方 Provider 卡片开始创作</p>
@@ -912,7 +929,7 @@ export default function CreatePage() {
         )}
 
         {/* Three Column Layout */}
-        <div className={`grid grid-cols-1 lg:grid-cols-12 gap-6 ${!activeProvider ? 'opacity-40 pointer-events-none select-none' : ''}`}>
+        <div className={`grid grid-cols-1 lg:grid-cols-12 gap-6 ${!provider.value ? 'opacity-40 pointer-events-none select-none' : ''}`}>
           {/* Left Column - Parameters */}
           <div className="lg:col-span-3 space-y-6">
             <MusicStyleSelector
@@ -1031,20 +1048,20 @@ export default function CreatePage() {
             <MusicPlayer
               audioUrl={generatedAudioUrl}
               candidates={
-                activeProvider === 'pule' && puleSongs.length > 0
+                provider.value === 'pule' && puleSongs.length > 0
                   ? puleSongs.filter(s => s.audio_url).map((s, i) => ({ url: s.audio_url!, label: `第 ${i + 1} 首` }))
-                  : activeProvider === 'suno' && sunoSongs.length > 0
+                  : provider.value === 'suno' && sunoSongs.length > 0
                     ? sunoSongs.filter(s => s.audio_url).map((s, i) => ({ url: s.audio_url!, label: `第 ${i + 1} 首` }))
                     : undefined
               }
               title={songTitle || undefined}
-              provider={activeProvider || undefined}
+              provider={provider.value || undefined}
               isGenerating={isGenerating}
               generationProgress={generationProgress}
             />
 
             {/* PuLe Status Display */}
-            {activeProvider === 'pule' && pulePollingStatus !== 'idle' && (
+            {provider.value === 'pule' && pulePollingStatus !== 'idle' && (
               <div className="glass-card p-4">
                 <div className="flex items-center gap-2 mb-2">
                   {pulePollingStatus === 'polling' && (
@@ -1095,7 +1112,7 @@ export default function CreatePage() {
             )}
 
             {/* Suno Status Display */}
-            {activeProvider === 'suno' && sunoPollingStatus !== 'idle' && (
+            {provider.value === 'suno' && sunoPollingStatus !== 'idle' && (
               <div className="glass-card p-4">
                 <div className="flex items-center gap-2 mb-2">
                   {sunoPollingStatus === 'polling' && (
@@ -1163,7 +1180,7 @@ export default function CreatePage() {
             {/* Generate Button */}
             <Button
               onClick={handleGenerate}
-              disabled={isGenerating || !activeProvider}
+              disabled={isGenerating || !provider.value}
               className="w-full py-6 text-lg font-semibold gradient-gold-purple hover:opacity-90 glow-gold disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isGenerating ? (
