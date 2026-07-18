@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasAceDataKey } from '@/lib/acedata';
 import { getMusicProvider } from '@/lib/music-provider';
+import { sanitizeLyrics } from '@/lib/lyrics-sanitizer';
 
 export async function POST(request: NextRequest) {
   try {
@@ -56,17 +57,28 @@ export async function POST(request: NextRequest) {
     // Map vocal_type to provider vocal_gender
     const vocalGender = vocal_type === 'male' ? 'male' as const : vocal_type === 'female' ? 'female' as const : 'auto' as const;
 
+    // 歌词净化：去除方括号标签，避免 MiniMax 报错
+    const sanitizeResult = lyrics ? sanitizeLyrics(lyrics) : undefined;
+    const sanitizedLyrics = sanitizeResult?.sanitized;
+    const hasBrackets = lyrics ? /\[.*?\]/.test(lyrics) : false;
+    console.log('[generate-music] Lyrics sanitized:', { 
+      original: lyrics?.slice(0, 50) + '...', 
+      sanitized: sanitizedLyrics?.slice(0, 50) + '...',
+      hasBrackets,
+      removedCount: sanitizeResult?.removedCount ?? 0
+    });
+
     // 调用 provider 生成音乐
     const provider = getMusicProvider();
     console.log('[generate-music] Provider selected:', provider.name, 'MUSIC_PROVIDER:', process.env.MUSIC_PROVIDER);
     const result = await provider.generate({
       prompt,
-      lyric: isInstrumental ? undefined : (lyrics || undefined),
+      lyric: isInstrumental ? undefined : (sanitizedLyrics || undefined),
       style: styles.join(', '),
       title: title || undefined,
       model_version,
-      custom_mode: !!lyrics,
-      instrumental: isInstrumental || (!lyrics && !description),
+      custom_mode: !!sanitizedLyrics,
+      instrumental: isInstrumental || (!sanitizedLyrics && !description),
       vocal_gender: vocalGender,
       duration,
     });
@@ -103,6 +115,11 @@ export async function POST(request: NextRequest) {
     // 如果同步返回了结果
     if (songsArray.length > 0) {
       const music = songsArray[0];
+      // 对返回的歌词也做净化（防止 provider 返回带方括号的歌词）
+      const returnSanitize = music.lyric ? sanitizeLyrics(music.lyric) : undefined;
+      const finalLyrics = returnSanitize?.sanitized || sanitizedLyrics || null;
+      const finalAnalysis = returnSanitize || sanitizeResult;
+      
       return NextResponse.json({
         taskId: result.task_id,
         provider: result.provider,
@@ -112,7 +129,13 @@ export async function POST(request: NextRequest) {
         audioUrl: music.audio_url,
         imageUrl: cover_url || music.image_url,
         duration: music.duration,
-        lyric: music.lyric,
+        lyric: finalLyrics,
+        sanitized_lyrics: finalLyrics,
+        lyrics_analysis: finalAnalysis ? {
+          segments: finalAnalysis.segments,
+          removedCount: finalAnalysis.removedCount,
+          removedSamples: finalAnalysis.removedSamples
+        } : null,
         title: music.title,
         language: language || 'zh',
         vocal_type: vocal_type || 'female',
@@ -131,6 +154,13 @@ export async function POST(request: NextRequest) {
       model_version: result.model_version,
       actual_model: result.actual_model,
       warning: result.warning,
+      lyric: sanitizedLyrics || null,
+      sanitized_lyrics: sanitizedLyrics || null,
+      lyrics_analysis: sanitizeResult ? {
+        segments: sanitizeResult.segments,
+        removedCount: sanitizeResult.removedCount,
+        removedSamples: sanitizeResult.removedSamples
+      } : null,
       language: language || 'zh',
       vocal_type: vocal_type || 'female',
       mood: mood || null,
@@ -212,3 +242,4 @@ function buildPrompt(
 
   return parts.join('\n');
 }
+

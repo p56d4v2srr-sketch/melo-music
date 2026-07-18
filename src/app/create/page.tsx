@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Navbar } from '@/components/navbar';
 import { MusicStyleSelector } from '@/components/music-style-selector';
@@ -11,7 +11,8 @@ import { VoiceUpload, type VoiceFile } from '@/components/voice-upload';
 import { MusicPlayer } from '@/components/music-player';
 import { DeepThinkingLyrics } from '@/components/deep-thinking-lyrics';
 import { Button } from '@/components/ui/button';
-import { Sparkles, Loader2 } from 'lucide-react';
+import { Sparkles, Loader2, AlertTriangle } from 'lucide-react';
+import { analyzeLyricsForUI } from '@/lib/lyrics-sanitizer';
 
 // 模型系列 tab 定义
 const MODEL_TABS = [
@@ -57,6 +58,21 @@ export default function CreatePage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
   const [generatedAudioUrl, setGeneratedAudioUrl] = useState<string>();
+  const [lyricsAnalysis, setLyricsAnalysis] = useState<{
+    hasBrackets: boolean;
+    bracketTags: string[];
+    warningText: string;
+  }>({ hasBrackets: false, bracketTags: [], warningText: '' });
+
+  // Auto-analyze lyrics when they change
+  useEffect(() => {
+    const analysis = analyzeLyricsForUI(lyrics);
+    setLyricsAnalysis({
+      hasBrackets: analysis.hasBrackets,
+      bracketTags: analysis.bracketTags,
+      warningText: analysis.warningText,
+    });
+  }, [lyrics]);
 
   const handleModelTabClick = (tabKey: string) => {
     const tab = MODEL_TABS.find(t => t.key === tabKey);
@@ -385,6 +401,36 @@ export default function CreatePage() {
               onChange={setLyrics}
               onImportFromAI={handleLyricsFromAI}
             />
+            
+            {/* Lyrics Analysis Bar - shows bracket tag warning */}
+            {lyricsAnalysis.hasBrackets && (
+              <div className="glass-card p-3 border-l-2 border-amber-400/60 bg-amber-500/5">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-amber-200/90 leading-relaxed">
+                      {lyricsAnalysis.warningText}
+                    </p>
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {lyricsAnalysis.bracketTags.slice(0, 8).map((tag, i) => (
+                        <span
+                          key={i}
+                          className="inline-block px-1.5 py-0.5 text-[10px] font-mono bg-amber-400/10 text-amber-300 rounded"
+                        >
+                          [{tag}]
+                        </span>
+                      ))}
+                      {lyricsAnalysis.bracketTags.length > 8 && (
+                        <span className="inline-block px-1.5 py-0.5 text-[10px] text-amber-400/60">
+                          +{lyricsAnalysis.bracketTags.length - 8}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
             <DeepThinkingLyrics onLyricsGenerated={handleLyricsFromAI} />
           </div>
 
