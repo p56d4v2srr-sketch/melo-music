@@ -16,7 +16,7 @@ import { Sparkles, Loader2 } from 'lucide-react';
 // 模型系列 tab 定义
 const MODEL_TABS = [
   { key: 'minimax', name: 'MiniMax（海螺音乐）', enabled: true },
-  { key: 'suno', name: 'Suno', enabled: true, badge: '渠道开通中' },
+  { key: 'suno', name: 'Suno', enabled: false, badge: '暂不可用' },
   { key: 'mureka', name: 'Mureka', enabled: false },
   { key: 'acestep', name: 'ACE-Step', enabled: false },
   { key: 'voice-clone', name: '音色克隆', enabled: false },
