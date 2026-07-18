@@ -89,7 +89,7 @@ export class MiniMaxProvider implements MusicProvider {
     console.log('[MiniMax] Submit:', { endpoint, model: 'music-2.0', input_length: body.input.length, lyrics_length: body.lyrics.length });
 
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 120000); // 120s timeout
+    const timer = setTimeout(() => controller.abort(), 240000); // 120s timeout
 
     let res: Response;
     try {
@@ -105,7 +105,7 @@ export class MiniMaxProvider implements MusicProvider {
     } catch (err) {
       clearTimeout(timer);
       if (err instanceof Error && err.name === 'AbortError') {
-        const errorMsg = `MiniMax 请求超时（120s）`;
+        const errorMsg = `MiniMax 请求超时（240s）`;
         console.error('[MiniMax]', errorMsg);
         return {
           task_id: '',
