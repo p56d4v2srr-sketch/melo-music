@@ -1,9 +1,13 @@
 /**
- * MiniMax music-2.0 Provider
- * 通过 DMXAPI 网关调用 MiniMax music-2.0 音乐生成，同步返回音频 URL
+ * MiniMax Music Provider
+ * 通过 DMXAPI 网关调用 MiniMax 音乐生成，同步返回音频 URL
  * Endpoint: POST /v1/responses
  * Auth: Authorization: <API_KEY>（不带 Bearer）
  * Docs: https://doc.dmxapi.cn
+ * 
+ * 支持模型：
+ * - music-2.0: 经典款，~18s 音频，WAV 无损
+ * - music-2.5: 最新版，~2min 音频，WAV 无损（推荐，2026-07 上线）
  */
 
 import type { MusicProvider, GenerateParams, GenerateResult, ProviderTaskStatus } from './music-provider';
@@ -59,6 +63,13 @@ export class MiniMaxProvider implements MusicProvider {
   name = 'minimax';
 
   async generate(params: GenerateParams): Promise<GenerateResult> {
+    // 支持 music-2.0 和 music-2.5，默认 music-2.5
+    const validModels = ['music-2.0', 'music-2.5'] as const;
+    const requestedModel = params.model_version || 'music-2.5';
+    const model: string = validModels.includes(requestedModel as typeof validModels[number]) 
+      ? requestedModel 
+      : 'music-2.5';
+
     const apiKey = getApiKey();
     if (!apiKey) {
       return {
@@ -66,14 +77,14 @@ export class MiniMaxProvider implements MusicProvider {
         status: 'failed',
         provider: this.name,
         model_version: params.model_version,
-        actual_model: 'music-2.0',
+        actual_model: model,
         data: { error: 'DMXAPI_API_KEY not configured' },
       };
     }
 
     const endpoint = `${getApiBase()}/v1/responses`;
     const body = {
-      model: 'music-2.0',
+      model,
       input: params.prompt || '',
       lyrics: params.lyric || '',
       audio_setting: {
@@ -86,7 +97,7 @@ export class MiniMaxProvider implements MusicProvider {
       stream: false,
     };
 
-    console.log('[MiniMax] Submit:', { endpoint, model: 'music-2.0', input_length: body.input.length, lyrics_length: body.lyrics.length });
+    console.log('[MiniMax] Submit:', { endpoint, model, input_length: body.input.length, lyrics_length: body.lyrics.length });
 
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 240000); // 120s timeout
@@ -112,7 +123,7 @@ export class MiniMaxProvider implements MusicProvider {
           status: 'failed',
           provider: this.name,
           model_version: params.model_version,
-          actual_model: 'music-2.0',
+          actual_model: model,
           data: { error: errorMsg },
         };
       }

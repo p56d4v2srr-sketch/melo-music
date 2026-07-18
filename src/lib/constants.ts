@@ -5,8 +5,20 @@
 
 /**
  * MiniMax 模型
+ * V5.8+: 新增 music-2.5（2026-07 探测，DMXAPI 可用，生成时长 ~2min）
+ * music-2.0: 同步返回，~18s 音频，WAV 无损
+ * music-2.5: 同步返回，~2min 音频，WAV 无损（推荐）
+ * music-2.6: DMXAPI 列表存在但实测超时，暂不启用
+ * music-3.0: 尚未在任何 API 上线（PuYue/DMXAPI 均返回 model_not_found）
  */
-export const MINIMAX_MODEL = 'music-2.0' as const;
+export const MINIMAX_MODEL = 'music-2.5' as const;
+
+export const MINIMAX_MODELS = [
+  { value: 'music-2.0', label: 'MiniMax music-2.0', desc: '经典款 · ~18s · 同步WAV' },
+  { value: 'music-2.5', label: 'MiniMax music-2.5', desc: '最新版 · ~2min · 同步WAV · 推荐' },
+] as const;
+
+export type MiniMaxModelValue = typeof MINIMAX_MODELS[number]['value'];
 
 /**
  * PuLe（天谱乐 tianpuyue.cn）模型

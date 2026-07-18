@@ -23,7 +23,7 @@ import { ARTISTS, getArtistById } from '@/data/artists';
 
 // Provider tab 定义（顶层切换）
 const PROVIDER_TABS = [
-  { key: 'minimax', name: 'MiniMax · 快', subtitle: '~1min · 免费', enabled: true },
+  { key: 'minimax', name: 'MiniMax · 快', subtitle: '~2min · 免费 · music-2.5', enabled: true },
   { key: 'pule', name: 'PuLe · 精品', subtitle: '~90s · ¥0.3/首 · 5min · 时间戳歌词', enabled: true },
   { key: 'suno', name: 'Suno · 全球 v5.5', subtitle: '~60-90s · 2 首供选 · 流式播放 · 内核覆盖中外全曲风元素', enabled: true },
 ];
@@ -51,7 +51,8 @@ const SUNO_VERSIONS = SUNO_VERSION_DATA.map(v => ({
 
 // MiniMax 版本定义
 const MINIMAX_VERSIONS = [
-  { key: 'music-2.0', name: 'MiniMax music-2.0', desc: '同步返回 · 约 40 秒生成 · 原生 WAV 无损输出', credits: '免费', badge: null },
+  { key: 'music-2.0', name: 'MiniMax music-2.0', desc: '经典款 · ~18s · 同步WAV无损', credits: '免费', badge: null },
+  { key: 'music-2.5', name: 'MiniMax music-2.5', desc: '最新版 · ~2min · 同步WAV无损 · 推荐', credits: '免费', badge: '推荐' },
 ];
 
 export default function CreatePage() {
@@ -59,7 +60,7 @@ export default function CreatePage() {
   const provider = useToggleSelection<'minimax' | 'pule' | 'suno'>();
   
   // ========== MiniMax sub-model (useToggleSelection, 必选组) ==========
-  const miniMaxModel = useToggleSelection<'music-2.0'>('music-2.0');
+  const miniMaxModel = useToggleSelection<'music-2.0' | 'music-2.5'>('music-2.5');
   
   // ========== PuLe sub-model (useToggleSelection, 必选组) ==========
   const puleModel = useToggleSelection<string>(PULE_MODEL);
@@ -892,10 +893,10 @@ export default function CreatePage() {
               {MINIMAX_VERSIONS.map((version) => (
                 <button
                   key={version.key}
-                  onClick={() => sunoVersion.toggle(version.key)}
+                  onClick={() => miniMaxModel.toggle(version.key as 'music-2.0' | 'music-2.5')}
                   className={`
                     relative flex-shrink-0 w-64 p-4 rounded-xl transition-all text-left
-                    ${sunoVersion.value === version.key
+                    ${miniMaxModel.value === version.key
                       ? 'border-2 border-amber-400 bg-amber-400/5 shadow-[0_0_20px_rgba(212,175,55,0.15)]'
                       : 'border border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20'
                     }
@@ -912,7 +913,7 @@ export default function CreatePage() {
                   )}
                   
                   {/* Version Name */}
-                  <h3 className={`text-sm font-bold mb-1 ${sunoVersion.value === version.key ? 'text-amber-400' : 'text-foreground'}`}>
+                  <h3 className={`text-sm font-bold mb-1 ${miniMaxModel.value === version.key ? 'text-amber-400' : 'text-foreground'}`}>
                     {version.name}
                   </h3>
                   
