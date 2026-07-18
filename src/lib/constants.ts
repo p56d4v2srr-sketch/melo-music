@@ -62,11 +62,13 @@ export const MAX_TIMBRE_CHIP_SELECTED = 3;
 export const PROVIDER_MINIMAX = 'minimax' as const;
 export const PROVIDER_PULE = 'pule' as const;
 export const PROVIDER_SUNO = 'suno' as const;
+export const PROVIDER_MUREKA = 'mureka' as const;
 
 export type ProviderKey =
   | typeof PROVIDER_MINIMAX
   | typeof PROVIDER_PULE
-  | typeof PROVIDER_SUNO;
+  | typeof PROVIDER_SUNO
+  | typeof PROVIDER_MUREKA;
 
 /**
  * 所有模型名的枚举（供 UI 显示、type-safe check）

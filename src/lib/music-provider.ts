@@ -57,6 +57,7 @@ export interface MusicProvider {
 // 'minimax' → MiniMaxProvider（默认，需 DMXAPI_API_KEY，同步返回 WAV）
 // 'dmxapi'  → DmxApiProvider（Suno 通道，需 DMXAPI_API_KEY）
 // 'acedata' → AceDataProvider（需 ACEDATA_API_KEY）
+// 'mureka'  → MurekaProvider（昆仑万维，需 MUREKA_API_KEY，待 API 文档确认）
 // 未设置/其他 → MiniMaxProvider（默认）
 export function getMusicProvider(): MusicProvider {
   const provider = (process.env.MUSIC_PROVIDER || 'minimax').toLowerCase().trim();
@@ -70,6 +71,11 @@ export function getMusicProvider(): MusicProvider {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { AceDataProvider } = require('./acedata');
     return new AceDataProvider();
+  }
+  if (provider === 'mureka') {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { MurekaProvider } = require('./mureka');
+    return new MurekaProvider();
   }
   // 默认走 MiniMax（同步返回 WAV 无损音频）
   // eslint-disable-next-line @typescript-eslint/no-require-imports
