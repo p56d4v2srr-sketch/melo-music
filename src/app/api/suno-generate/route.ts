@@ -96,13 +96,21 @@ export async function POST(request: NextRequest) {
       );
     }
     
+    // 中文歌词自动识别：检测歌词或描述中是否含中文，若是则追加 mandarin vocal 标签
+    let finalTags = tags || '';
+    const hasChinese = /[\u4e00-\u9fa5]/.test((sanitizedLyrics || '') + (prompt || ''));
+    if (hasChinese) {
+      finalTags = (finalTags ? finalTags + ', ' : '') + 'mandarin vocal, chinese pronunciation, cross-cultural fusion, global music elements';
+      console.log('[suno-generate] Chinese content detected, appended mandarin vocal tags');
+    }
+
     // Call Suno API
     const result = await generateSuno({
       mode,
       prompt,
       title,
       lyrics: sanitizedLyrics,  // 使用净化后的歌词
-      tags,
+      tags: finalTags,
       instrumental,
       model: effectiveModel,
       negative_tags,

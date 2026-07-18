@@ -21,7 +21,7 @@ import { SELECTION_STYLES } from '@/lib/ui-tokens';
 const PROVIDER_TABS = [
   { key: 'minimax', name: 'MiniMax · 快', subtitle: '~1min · 免费', enabled: true },
   { key: 'pule', name: 'PuLe · 精品', subtitle: '~90s · ¥0.3/首 · 5min · 时间戳歌词', enabled: true },
-  { key: 'suno', name: 'Suno · 欧美 v5.5', subtitle: '~60-90s · 2 首供选 · 流式播放 · 中英日多语', enabled: true },
+  { key: 'suno', name: 'Suno · 全球 v5.5', subtitle: '~60-90s · 2 首供选 · 流式播放 · 内核覆盖中外全曲风元素', enabled: true },
 ];
 
 // 模型系列 tab 定义
@@ -762,6 +762,10 @@ export default function CreatePage() {
                 </button>
               ))}
             </div>
+            {/* Suno 全球提示小字 */}
+            <p className="text-[11px] text-muted-foreground/60 mt-2">
+              🌍 Suno 全球 —— 支持中英文混唱、跨曲风融合、覆盖中外所有曲风元素
+            </p>
           </div>
         )}
 
