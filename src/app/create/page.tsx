@@ -30,14 +30,17 @@ const MODEL_TABS = [
   { key: 'voice-clone', name: '音色克隆', enabled: false },
 ];
 
-// Suno 版本定义
-const SUNO_VERSIONS = [
-  { key: 'v5-5', name: 'Suno V5.5', desc: '最新发布实验模型，人声更细腻，输出音质提升', credits: '5 积分/首', badge: 'NEW' },
-  { key: 'v5', name: 'Suno V5.0', desc: '实验模型，音质细腻，默认推荐', credits: '5 积分/首', badge: '默认' },
-  { key: 'v4-5-plus', name: 'Suno V4.5+', desc: '主力生成模型，最长 8 分钟', credits: '5 积分/首', badge: null },
-  { key: 'v4-5', name: 'Suno V4.5', desc: '支持自然语言描述音乐风格，最长 8 分钟', credits: '5 积分/首', badge: null },
-  { key: 'v4', name: 'Suno V4.0', desc: '超强音乐生成，堪比真人', credits: '5 积分/首', badge: null },
-];
+// Suno 版本定义 - 使用 constants.ts 中的上游探测结果
+import { SUNO_VERSIONS as SUNO_VERSION_DATA, DEFAULT_SUNO_VERSION, MAX_TIMBRE_CHIP_SELECTED } from '@/lib/constants';
+import { VOCAL_TIMBRES } from '@/data/vocal-timbres';
+
+const SUNO_VERSIONS = SUNO_VERSION_DATA.map(v => ({
+  key: v.value,
+  name: v.label,
+  desc: v.desc,
+  credits: '5 积分/首',
+  badge: v.value === DEFAULT_SUNO_VERSION ? '默认' : null,
+}));
 
 // MiniMax 版本定义
 const MINIMAX_VERSIONS = [
@@ -68,6 +71,11 @@ export default function CreatePage() {
   const [sunoPrompt, setSunoPrompt] = useState('');
   // Suno custom mode tags
   const [sunoTags, setSunoTags] = useState('');
+  // Suno advanced options state
+  const [sunoVersion, setSunoVersion] = useState<string>(DEFAULT_SUNO_VERSION);
+  const [sunoVocalGender, setSunoVocalGender] = useState<'male' | 'female' | 'duet' | 'instrumental' | null>(null);
+  const [sunoTimbres, setSunoTimbres] = useState<string[]>([]);
+  const [sunoAdvancedOpen, setSunoAdvancedOpen] = useState(false);
   
   // State
   const [activeModelTab, setActiveModelTab] = useState('minimax');
@@ -519,23 +527,37 @@ export default function CreatePage() {
       // Build request body
       const body: Record<string, unknown> = {
         mode: sunoMode,
-        model: 'chirp-v5.5',
-        instrumental: vocalType === 'instrumental',
+        version: sunoVersion,
+        instrumental: sunoVocalGender === 'instrumental' || vocalType === 'instrumental',
       };
+
+      // Vocal gender (only pass if explicitly selected and not instrumental/duet)
+      if (sunoVocalGender === 'male' || sunoVocalGender === 'female') {
+        body.vocal_gender = sunoVocalGender;
+      }
 
       if (isCustomMode) {
         // Custom mode: title + tags + lyrics
         body.title = songTitle || 'Untitled Melo';
-        body.tags = selectedStyles.length > 0 ? selectedStyles.join(', ') : 'pop, chinese';
+        // Build tags: base styles + duet tag + timbre tags
+        const tagParts: string[] = [];
+        if (selectedStyles.length > 0) tagParts.push(selectedStyles.join(', '));
+        else tagParts.push('pop, chinese');
+        if (sunoVocalGender === 'duet') tagParts.push('male & female duet');
+        if (sunoTimbres.length > 0) tagParts.push(sunoTimbres.join(', '));
+        body.tags = tagParts.join(', ');
         body.lyrics = lyrics || undefined;
       } else {
         // Prompt mode: just prompt
-        const prompt = [
-          description,
-          selectedStyles.length > 0 ? `风格：${selectedStyles.join(', ')}` : '',
-          vocalType === 'male' ? '男声' : vocalType === 'female' ? '女声' : '',
-          mood ? `情绪：${mood}` : '',
-        ].filter(Boolean).join('，');
+        const promptParts: string[] = [];
+        if (description) promptParts.push(description);
+        if (selectedStyles.length > 0) promptParts.push(`风格：${selectedStyles.join(', ')}`);
+        if (sunoVocalGender === 'male' || vocalType === 'male') promptParts.push('男声');
+        else if (sunoVocalGender === 'female' || vocalType === 'female') promptParts.push('女声');
+        else if (sunoVocalGender === 'duet') promptParts.push('男女对唱');
+        if (mood) promptParts.push(`情绪：${mood}`);
+        if (sunoTimbres.length > 0) promptParts.push(`音色：${sunoTimbres.join(', ')}`);
+        const prompt = promptParts.filter(Boolean).join('，');
         body.prompt = prompt || '温暖治愈的中文流行';
       }
 
@@ -726,6 +748,112 @@ export default function CreatePage() {
                 </button>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Suno Advanced Options (only show when Suno tab is active) */}
+        {activeModelTab === 'suno' && (
+          <div className="mb-6 space-y-4">
+            {/* Collapsible Advanced Options */}
+            <button
+              onClick={() => setSunoAdvancedOpen(!sunoAdvancedOpen)}
+              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <span className={`transition-transform ${sunoAdvancedOpen ? 'rotate-90' : ''}`}>▶</span>
+              高级选项
+              {(sunoVocalGender || sunoTimbres.length > 0) && (
+                <span className="px-1.5 py-0.5 rounded bg-amber-400/10 text-amber-400 text-[10px]">
+                  已配置
+                </span>
+              )}
+            </button>
+
+            {sunoAdvancedOpen && (
+              <div className="space-y-4 pl-4 border-l border-white/10">
+                {/* Vocal Gender Selector */}
+                <div>
+                  <label className="text-xs text-muted-foreground mb-2 block">人声性别</label>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { value: 'male' as const, emoji: '👨', label: '男声' },
+                      { value: 'female' as const, emoji: '👩', label: '女声' },
+                      { value: 'duet' as const, emoji: '👥', label: '男女对唱' },
+                      { value: 'instrumental' as const, emoji: '🎼', label: '纯乐器' },
+                    ].map((opt) => (
+                      <button
+                        key={opt.value}
+                        onClick={() => setSunoVocalGender(sunoVocalGender === opt.value ? null : opt.value)}
+                        className={`
+                          px-3 py-1.5 rounded-lg text-sm transition-all
+                          ${sunoVocalGender === opt.value
+                            ? 'bg-amber-400/20 text-amber-400 border border-amber-400/50'
+                            : 'bg-white/5 text-muted-foreground border border-white/10 hover:bg-white/10'
+                          }
+                        `}
+                      >
+                        {opt.emoji} {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Timbre Chips */}
+                <div>
+                  <label className="text-xs text-muted-foreground mb-2 block">
+                    音色标签
+                    <span className="ml-2 text-muted-foreground/50">（最多选 {MAX_TIMBRE_CHIP_SELECTED} 个）</span>
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {VOCAL_TIMBRES.map((timb) => {
+                      const isSelected = sunoTimbres.includes(timb.tag);
+                      const isDisabled = !isSelected && sunoTimbres.length >= MAX_TIMBRE_CHIP_SELECTED;
+                      return (
+                        <button
+                          key={timb.tag}
+                          onClick={() => {
+                            if (isSelected) {
+                              setSunoTimbres(sunoTimbres.filter(t => t !== timb.tag));
+                            } else if (!isDisabled) {
+                              setSunoTimbres([...sunoTimbres, timb.tag]);
+                            }
+                          }}
+                          disabled={isDisabled}
+                          className={`
+                            px-3 py-1.5 rounded-lg text-sm transition-all
+                            ${isSelected
+                              ? 'bg-purple-500/20 text-purple-300 border border-purple-500/50'
+                              : isDisabled
+                                ? 'bg-white/5 text-muted-foreground/30 border border-white/5 cursor-not-allowed'
+                                : 'bg-white/5 text-muted-foreground border border-white/10 hover:bg-white/10'
+                            }
+                          `}
+                        >
+                          {timb.emoji} {timb.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Coming Soon: Persona + Voice Clone */}
+                <div className="flex gap-3 pt-2">
+                  <button
+                    disabled
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm bg-white/5 text-muted-foreground/50 border border-white/10 cursor-not-allowed"
+                  >
+                    🎵 我的音色库
+                    <span className="px-1.5 py-0.5 rounded bg-white/10 text-[10px]">Coming Soon</span>
+                  </button>
+                  <button
+                    disabled
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm bg-white/5 text-muted-foreground/50 border border-white/10 cursor-not-allowed"
+                  >
+                    🎙️ 上传我的声音
+                    <span className="px-1.5 py-0.5 rounded bg-white/10 text-[10px]">Coming Soon</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

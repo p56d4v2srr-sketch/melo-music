@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { generateSuno, SunoApiError } from '@/lib/suno';
 import { sanitizeLyrics } from '@/lib/lyrics-sanitizer';
+import { SUNO_VERSIONS, DEFAULT_SUNO_VERSION } from '@/lib/constants';
 
 // Zod schema for validation
 const generateSchema = z.object({
@@ -12,6 +13,7 @@ const generateSchema = z.object({
   tags: z.string().max(1000).optional(),
   instrumental: z.boolean().optional(),
   model: z.string().optional(),
+  version: z.string().optional(),
   negative_tags: z.string().max(1000).optional(),
   vocal_gender: z.enum(['male', 'female']).optional(),
   style_weight: z.number().min(0).max(1).optional(),
@@ -37,7 +39,21 @@ export async function POST(request: NextRequest) {
       throw zodError;
     }
     
-    const { mode, prompt, title, lyrics, tags, instrumental, model, negative_tags, vocal_gender, style_weight, weirdness_constraint } = parsed;
+    const { mode, prompt, title, lyrics, tags, instrumental, model, version, negative_tags, vocal_gender, style_weight, weirdness_constraint } = parsed;
+    
+    // Version whitelist validation
+    let effectiveModel = model;
+    if (version) {
+      const validVersion = SUNO_VERSIONS.find(v => v.value === version);
+      if (validVersion) {
+        effectiveModel = version;
+      } else {
+        console.warn(`[suno-generate] Invalid version '${version}', falling back to default '${DEFAULT_SUNO_VERSION}'`);
+        effectiveModel = DEFAULT_SUNO_VERSION;
+      }
+    } else if (!effectiveModel) {
+      effectiveModel = DEFAULT_SUNO_VERSION;
+    }
     
     // Mode-specific validation
     if (mode === 'prompt' && !prompt?.trim()) {
@@ -87,7 +103,7 @@ export async function POST(request: NextRequest) {
       lyrics: sanitizedLyrics,  // 使用净化后的歌词
       tags,
       instrumental,
-      model,
+      model: effectiveModel,
       negative_tags,
       vocal_gender,
       style_weight,

@@ -16,9 +16,28 @@ export const MINIMAX_MODEL = 'music-2.0' as const;
 export const PULE_MODEL = 'TemPolor v4.5' as const;
 
 /**
- * Suno（谱乐 AI yourmusic.fun）模型
+ * Suno（谱乐 AI yourmusic.fun）版本枚举
+ * V5.8: 上游探测 5 个版本全部有效（返回 insufficient_credits 而非 invalid model）
+ */
+export const SUNO_VERSIONS = [
+  { value: 'chirp-v3-5', label: 'Suno v3.5', desc: '经典款，快速稳定' },
+  { value: 'chirp-v4', label: 'Suno v4', desc: '编曲更饱满' },
+  { value: 'chirp-v4-5', label: 'Suno v4.5', desc: '中英双语加强' },
+  { value: 'chirp-v5', label: 'Suno v5', desc: '综合最佳' },
+  { value: 'chirp-v5-5', label: 'Suno v5.5', desc: '最新版·风格更狂野' },
+] as const;
+
+export const DEFAULT_SUNO_VERSION = 'chirp-v5' as const;
+
+/**
+ * @deprecated 使用 DEFAULT_SUNO_VERSION 代替
  */
 export const SUNO_MODEL_V55 = 'chirp-v5.5' as const;
+
+/**
+ * 音色 chip 最大可选数量
+ */
+export const MAX_TIMBRE_CHIP_SELECTED = 3;
 
 /**
  * Provider 标识（DB 落库 + UI 判分支用）
