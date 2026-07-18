@@ -6,7 +6,7 @@ import { sanitizeLyrics } from '@/lib/lyrics-sanitizer';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { styles, singers, description, lyrics, voiceId, title, duration, language, vocal_type, mood, is_public, cover_url, cover_source, model_version = 'v5' } = body;
+    const { styles, singers, description, lyrics, voiceId, title, duration, language, vocal_type, mood, is_public, cover_url, cover_source, model_version = 'v5', is_instrumental } = body;
 
     // 诊断 log：确认 Key 在运行时是否可读
     console.log('[generate-music] ACEDATA_API_KEY present:', !!process.env.ACEDATA_API_KEY, 'len:', process.env.ACEDATA_API_KEY?.length ?? 0);
@@ -51,8 +51,8 @@ export async function POST(request: NextRequest) {
     // 构建 prompt
     const prompt = buildPrompt(styles, singers, description, language, vocal_type, mood);
 
-    // Determine if instrumental mode
-    const isInstrumental = vocal_type === 'instrumental';
+    // Determine if instrumental mode (from vocal_type or explicit is_instrumental flag)
+    const isInstrumental = vocal_type === 'instrumental' || is_instrumental === true;
 
     // Map vocal_type to provider vocal_gender
     const vocalGender = vocal_type === 'male' ? 'male' as const : vocal_type === 'female' ? 'female' as const : 'auto' as const;
@@ -68,17 +68,26 @@ export async function POST(request: NextRequest) {
       removedCount: sanitizeResult?.removedCount ?? 0
     });
 
+    // V5.4 兜底：is_instrumental 且歌词净化后为空串时，塞 [Instrumental] 占位
+    // 避免空串传给 MiniMax 触发 HTTP 400
+    let lyricsForProvider = sanitizedLyrics;
+    if (isInstrumental && sanitizedLyrics?.trim() === '') {
+      lyricsForProvider = '[Instrumental]';
+      console.log('[generate-music] Instrumental mode with empty lyrics, using [Instrumental] placeholder');
+    }
+
     // 调用 provider 生成音乐
     const provider = getMusicProvider();
     console.log('[generate-music] Provider selected:', provider.name, 'MUSIC_PROVIDER:', process.env.MUSIC_PROVIDER);
     const result = await provider.generate({
       prompt,
-      lyric: isInstrumental ? undefined : (sanitizedLyrics || undefined),
+      // MiniMax 需要非空 lyrics，即使是乐器模式；如果有 lyricsForProvider（含 [Instrumental] 兜底），就传
+      lyric: lyricsForProvider || undefined,
       style: styles.join(', '),
       title: title || undefined,
       model_version,
-      custom_mode: !!sanitizedLyrics,
-      instrumental: isInstrumental || (!sanitizedLyrics && !description),
+      custom_mode: !!lyricsForProvider,
+      instrumental: isInstrumental || (!lyricsForProvider && !description),
       vocal_gender: vocalGender,
       duration,
     });

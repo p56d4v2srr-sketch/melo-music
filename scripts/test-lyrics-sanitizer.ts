@@ -211,6 +211,17 @@ console.log('\n=== Test 13: V5.4 Hotfix - e2e 场景 ===');
   assertEqual(result.removedSamples, ['[温柔地]', '[钢琴独奏]', '[女声哼唱]'], 'e2e: removedSamples 正确');
 }
 
+console.log('\n=== Test 14: V5.4 Hotfix #2 - 纯描述词歌词（乐器模式兜底场景）===');
+{
+  const input = '[钢琴独奏][温柔地]';
+  const result = sanitizeLyrics(input);
+  // 钢琴独奏 不匹配 独奏 别名（别名要求完全匹配），所以被判为 description
+  // 温柔地 也不是结构标签，判为 description
+  assertEqual(result.sanitized.trim(), '', 'sanitized trim 后为空字符串');
+  assertEqual(result.removedCount, 2, 'removedCount = 2');
+  assertEqual(result.removedSamples, ['[钢琴独奏]', '[温柔地]'], 'removedSamples 包含 [钢琴独奏] 和 [温柔地]');
+}
+
 console.log(`\n========================================`);
 console.log(`Total: ${passed + failed} tests`);
 console.log(`Passed: ${passed}`);
