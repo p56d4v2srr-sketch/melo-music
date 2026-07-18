@@ -7,7 +7,7 @@
  * - 查询：POST /open-apis/v1/song/query
  * 
  * 鉴权：Authorization: <api_key>（不带 Bearer）
- * 定价：TemPolor v4.6 ¥0.3/首（一次提交返回 2 首）
+ * 定价：TemPolor v4.6 ¥0.3/首（一次提交返回 1+ 首）
  */
 
 import { sanitizeLyrics } from './lyrics-sanitizer';
@@ -16,7 +16,7 @@ import { sanitizeLyrics } from './lyrics-sanitizer';
 
 export interface PuleGenerateParams {
   prompt: string;
-  model?: string;  // 默认 "tempolor-v4.6"
+  model?: string;  // 默认 "TemPolor v4.6"（注意大小写和空格）
   lyrics?: string;
   instrumental?: boolean;
   callback_url?: string;
@@ -32,6 +32,19 @@ export interface PuleSong {
   lyrics_sections?: Array<{ start_ms: number; end_ms: number; text: string }>;
   duration?: number;
   error?: string;
+  // 额外字段（查询接口返回）
+  title?: string;
+  style?: string;
+  prompt?: string;
+  event?: string | null;
+  audio_hi_status?: string | null;
+  lyrics_sections_status?: string | null;
+  lyrics_disp?: string | null;
+  lrc_mv?: string | null;
+  audio_bgm_url?: string | null;
+  created_at?: number;
+  finished_at?: number | null;
+  model?: string;
 }
 
 export interface PuleGenerateResponse {
@@ -123,17 +136,18 @@ export async function generatePule(params: PuleGenerateParams): Promise<PuleGene
   // 构建请求体
   const body: Record<string, unknown> = {
     prompt: params.prompt,
-    model: params.model || 'tempolor-v4.6',
+    model: params.model || 'TemPolor v4.6',  // 注意：大小写和空格敏感
     callback_url: params.callback_url || getCallbackUrl(),
     action: null,
     upload_audio_url: null,
     style_negative: null,
   };
 
-  // 根据 instrumental 决定是否传 lyrics
+  // PuLe API 要求必须传 lyrics，即使是 instrumental 模式
+  // instrumental 模式下用 [Instrumental] 占位
   if (params.instrumental) {
-    body.instrumental = true;
-    // instrumental 模式下不需要 lyrics
+    body.instrumental = false;  // API 不支持 instrumental=true，用歌词占位
+    body.lyrics = sanitizedLyrics?.trim() || '[Instrumental]';
   } else if (sanitizedLyrics && sanitizedLyrics.trim()) {
     body.lyrics = sanitizedLyrics;
     body.instrumental = false;

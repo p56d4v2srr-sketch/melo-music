@@ -6,7 +6,7 @@
  * - prompt: string (1-2000) 必填
  * - lyrics?: string 可选
  * - instrumental?: boolean 可选
- * - model?: string 可选，默认 "tempolor-v4.6"
+ * - model?: string 可选，默认 "TemPolor v4.6"（注意大小写和空格）
  * 
  * 返回：
  * - ok: true
@@ -25,7 +25,7 @@ const generateSchema = z.object({
   prompt: z.string().min(1, 'prompt 不能为空').max(2000, 'prompt 最多 2000 字符'),
   lyrics: z.string().max(5000).optional(),
   instrumental: z.boolean().optional().default(false),
-  model: z.string().optional().default('tempolor-v4.6'),
+  model: z.string().optional().default('TemPolor v4.6'),  // 注意：大小写和空格敏感
 });
 
 export async function POST(request: NextRequest) {
