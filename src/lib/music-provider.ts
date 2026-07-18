@@ -1,7 +1,7 @@
 /**
  * Music Provider 抽象层
  * 定义统一的音乐生成接口，支持多 provider 扩展
- * 支持 AceData 和 DMXAPI 两个 provider，通过 MUSIC_PROVIDER 环境变量切换
+ * 支持 MiniMax（默认）、AceData、DMXAPI 三个 provider，通过 MUSIC_PROVIDER 环境变量切换
  */
 
 export interface GenerateParams {
@@ -54,18 +54,25 @@ export interface MusicProvider {
 }
 
 // 工厂：根据 MUSIC_PROVIDER 环境变量切换 provider
-// 'dmxapi'  → DmxApiProvider（需 DMXAPI_API_KEY）
-// 其他/未设置 → AceDataProvider（默认，需 ACEDATA_API_KEY）
-// 演示模式（两个 Key 都缺）由 API route 层判断，此处按环境变量选择实装
+// 'minimax' → MiniMaxProvider（默认，需 DMXAPI_API_KEY，同步返回 WAV）
+// 'dmxapi'  → DmxApiProvider（Suno 通道，需 DMXAPI_API_KEY）
+// 'acedata' → AceDataProvider（需 ACEDATA_API_KEY）
+// 未设置/其他 → MiniMaxProvider（默认）
 export function getMusicProvider(): MusicProvider {
-  const provider = (process.env.MUSIC_PROVIDER || '').toLowerCase().trim();
+  const provider = (process.env.MUSIC_PROVIDER || 'minimax').toLowerCase().trim();
+  console.log('[getMusicProvider] MUSIC_PROVIDER env:', process.env.MUSIC_PROVIDER, '→ resolved:', provider);
   if (provider === 'dmxapi') {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { DmxApiProvider } = require('./dmxapi');
     return new DmxApiProvider();
   }
-  // 默认走 AceData（保留冗余）
+  if (provider === 'acedata') {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { AceDataProvider } = require('./acedata');
+    return new AceDataProvider();
+  }
+  // 默认走 MiniMax（同步返回 WAV 无损音频）
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { AceDataProvider } = require('./acedata');
-  return new AceDataProvider();
+  const { MiniMaxProvider } = require('./minimax');
+  return new MiniMaxProvider();
 }

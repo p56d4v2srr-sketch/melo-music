@@ -16,6 +16,11 @@ const ALLOWED_HOSTS = [
   'api.acedata.cloud',
 ];
 
+// Wildcard patterns for subdomain matching (e.g., *.aliyuncs.com)
+const ALLOWED_HOST_PATTERNS = [
+  /\.aliyuncs\.com$/,   // Aliyun OSS: xxx.oss-cn-hangzhou.aliyuncs.com
+];
+
 function sanitizeFilename(name: string): string {
   return name.replace(/[/\\:*?"<>|]/g, '_').replace(/\s+/g, '_');
 }
@@ -54,7 +59,8 @@ export async function GET(request: NextRequest) {
 
   // SSRF whitelist check
   const hostname = parsedUrl.hostname;
-  if (!ALLOWED_HOSTS.includes(hostname)) {
+  const isAllowed = ALLOWED_HOSTS.includes(hostname) || ALLOWED_HOST_PATTERNS.some(pattern => pattern.test(hostname));
+  if (!isAllowed) {
     console.log('[download-song] Domain not allowed:', hostname);
     return NextResponse.json(
       { error: 'DOMAIN_NOT_ALLOWED' },
@@ -71,8 +77,24 @@ export async function GET(request: NextRequest) {
   }
   safeFilename = sanitizeFilename(safeFilename);
 
-  // Determine content type
-  const contentType = type === 'video' ? 'video/mp4' : 'audio/mpeg';
+  // Determine content type based on URL extension and type parameter
+  const urlPath = parsedUrl.pathname.toLowerCase();
+  let contentType: string;
+  if (type === 'video') {
+    contentType = 'video/mp4';
+  } else if (urlPath.endsWith('.wav')) {
+    contentType = 'audio/wav';
+  } else if (urlPath.endsWith('.mp3')) {
+    contentType = 'audio/mpeg';
+  } else if (urlPath.endsWith('.ogg')) {
+    contentType = 'audio/ogg';
+  } else if (urlPath.endsWith('.flac')) {
+    contentType = 'audio/flac';
+  } else if (urlPath.endsWith('.m4a')) {
+    contentType = 'audio/mp4';
+  } else {
+    contentType = 'application/octet-stream';
+  }
 
   // ASCII fallback for Content-Disposition
   const asciiFilename = getAsciiFallback(safeFilename);

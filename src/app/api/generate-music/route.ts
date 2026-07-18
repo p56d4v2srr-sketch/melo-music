@@ -58,6 +58,7 @@ export async function POST(request: NextRequest) {
 
     // 调用 provider 生成音乐
     const provider = getMusicProvider();
+    console.log('[generate-music] Provider selected:', provider.name, 'MUSIC_PROVIDER:', process.env.MUSIC_PROVIDER);
     const result = await provider.generate({
       prompt,
       lyric: isInstrumental ? undefined : (lyrics || undefined),
@@ -87,11 +88,21 @@ export async function POST(request: NextRequest) {
     }
 
     // 成功返回
-    const responseData = result.data as { task_id?: string; data?: Array<{ audio_url?: string; image_url?: string; duration?: number; lyric?: string; title?: string }> } | undefined;
+    // 兼容两种格式：data 直接是数组，或 data 是包含 data 数组的对象
+    let songsArray: Array<{ audio_url?: string; image_url?: string; duration?: number; lyric?: string; title?: string }> = [];
+    
+    if (Array.isArray(result.data)) {
+      songsArray = result.data;
+    } else if (result.data && typeof result.data === 'object') {
+      const responseData = result.data as { data?: Array<{ audio_url?: string; image_url?: string; duration?: number; lyric?: string; title?: string }> };
+      if (Array.isArray(responseData.data)) {
+        songsArray = responseData.data;
+      }
+    }
 
     // 如果同步返回了结果
-    if (responseData?.data && responseData.data.length > 0) {
-      const music = responseData.data[0];
+    if (songsArray.length > 0) {
+      const music = songsArray[0];
       return NextResponse.json({
         taskId: result.task_id,
         provider: result.provider,

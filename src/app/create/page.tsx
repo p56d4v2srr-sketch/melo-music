@@ -15,9 +15,9 @@ import { Sparkles, Loader2 } from 'lucide-react';
 
 // 模型系列 tab 定义
 const MODEL_TABS = [
-  { key: 'suno', name: 'Suno', enabled: true },
+  { key: 'minimax', name: 'MiniMax（海螺音乐）', enabled: true },
+  { key: 'suno', name: 'Suno', enabled: true, badge: '渠道开通中' },
   { key: 'mureka', name: 'Mureka', enabled: false },
-  { key: 'minimax', name: 'MiniMax（海螺音乐）', enabled: false },
   { key: 'acestep', name: 'ACE-Step', enabled: false },
   { key: 'voice-clone', name: '音色克隆', enabled: false },
 ];
@@ -31,10 +31,15 @@ const SUNO_VERSIONS = [
   { key: 'v4', name: 'Suno V4.0', desc: '超强音乐生成，堪比真人', credits: '5 积分/首', badge: null },
 ];
 
+// MiniMax 版本定义
+const MINIMAX_VERSIONS = [
+  { key: 'music-2.0', name: 'MiniMax music-2.0', desc: '同步返回 · 约 40 秒生成 · 原生 WAV 无损输出', credits: '免费', badge: '推荐' },
+];
+
 export default function CreatePage() {
   // State
-  const [activeModelTab, setActiveModelTab] = useState('suno');
-  const [selectedModelVersion, setSelectedModelVersion] = useState('v5');
+  const [activeModelTab, setActiveModelTab] = useState('minimax');
+  const [selectedModelVersion, setSelectedModelVersion] = useState('music-2.0');
   const [songTitle, setSongTitle] = useState('');
   const [songDuration, setSongDuration] = useState(300); // 默认 5 分钟（300秒）
   const [language, setLanguage] = useState('zh');
@@ -192,7 +197,7 @@ export default function CreatePage() {
                 key={tab.key}
                 onClick={() => handleModelTabClick(tab.key)}
                 className={`
-                  px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all
+                  relative px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all
                   ${!tab.enabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
                   ${activeModelTab === tab.key && tab.enabled
                     ? 'text-amber-400 bg-amber-400/10 border border-amber-400/30 shadow-[0_0_12px_rgba(212,175,55,0.2)]'
@@ -201,6 +206,11 @@ export default function CreatePage() {
                 `}
               >
                 {tab.name}
+                {tab.badge && (
+                  <span className="ml-1.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-white/10 text-muted-foreground border border-white/10">
+                    {tab.badge}
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -230,6 +240,52 @@ export default function CreatePage() {
                         ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-black' 
                         : 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
                       }
+                    `}>
+                      {version.badge}
+                    </span>
+                  )}
+                  
+                  {/* Version Name */}
+                  <h3 className={`text-sm font-bold mb-1 ${selectedModelVersion === version.key ? 'text-amber-400' : 'text-foreground'}`}>
+                    {version.name}
+                  </h3>
+                  
+                  {/* Description */}
+                  <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
+                    {version.desc}
+                  </p>
+                  
+                  {/* Credits */}
+                  <span className="text-[10px] text-muted-foreground/70">
+                    {version.credits}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* MiniMax Version Cards (only show when MiniMax tab is active) */}
+        {activeModelTab === 'minimax' && (
+          <div className="mb-6">
+            <div className="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-hide">
+              {MINIMAX_VERSIONS.map((version) => (
+                <button
+                  key={version.key}
+                  onClick={() => setSelectedModelVersion(version.key)}
+                  className={`
+                    relative flex-shrink-0 w-64 p-4 rounded-xl transition-all text-left
+                    ${selectedModelVersion === version.key
+                      ? 'border-2 border-amber-400 bg-amber-400/5 shadow-[0_0_20px_rgba(212,175,55,0.15)]'
+                      : 'border border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20'
+                    }
+                  `}
+                >
+                  {/* Badge */}
+                  {version.badge && (
+                    <span className={`
+                      absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-bold
+                      bg-gradient-to-r from-amber-400 to-orange-500 text-black
                     `}>
                       {version.badge}
                     </span>
