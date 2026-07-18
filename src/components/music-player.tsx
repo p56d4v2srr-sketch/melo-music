@@ -3,24 +3,89 @@
 import { useEffect, useRef, useState } from 'react';
 import WaveSurfer from 'wavesurfer.js';
 import { cn } from '@/lib/utils';
-import { Play, Pause, Download, Share2, SkipBack, SkipForward } from 'lucide-react';
+import { Play, Pause, Download, Share2, SkipBack, SkipForward, ChevronLeft, ChevronRight } from 'lucide-react';
+
+interface AudioCandidate {
+  url: string;
+  label?: string;
+}
 
 interface MusicPlayerProps {
   audioUrl?: string;
+  /** Multiple audio candidates for switching (Suno/PuLe return 2 songs) */
+  candidates?: AudioCandidate[];
   title?: string;
+  /** Provider name for download filename */
+  provider?: string;
   isGenerating?: boolean;
   generationProgress?: number;
 }
 
-export function MusicPlayer({ audioUrl, title, isGenerating, generationProgress = 0 }: MusicPlayerProps) {
+/**
+ * Detect file extension from URL (ignoring query params)
+ * e.g. "https://example.com/song.wav?auth=xxx" -> "wav"
+ */
+function getUrlExtension(url: string): string {
+  try {
+    const pathname = new URL(url).pathname.toLowerCase();
+    const ext = pathname.split('.').pop();
+    if (ext && ['mp3', 'wav', 'ogg', 'flac', 'm4a', 'aac'].includes(ext)) {
+      return ext;
+    }
+  } catch { /* ignore */ }
+  return 'mp3'; // default fallback
+}
+
+/**
+ * Sanitize filename for Windows/macOS compatibility
+ */
+function sanitizeFilename(name: string): string {
+  return name.replace(/[/\\:*?"<>|]/g, '_').replace(/\s+/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+}
+
+/**
+ * Build download filename: <title>-<provider>-<idx>.<ext>
+ * Prevents double extension like .mp3.wav
+ */
+function buildDownloadFilename(title: string, provider: string, idx: number, url: string): string {
+  const ext = getUrlExtension(url);
+  const safeTitle = sanitizeFilename(title) || 'melo-music';
+  const safeProvider = sanitizeFilename(provider) || 'ai';
+  return `${safeTitle}-${safeProvider}-${idx + 1}.${ext}`;
+}
+
+export function MusicPlayer({ audioUrl, candidates, title, provider, isGenerating, generationProgress = 0 }: MusicPlayerProps) {
   const waveformRef = useRef<HTMLDivElement>(null);
   const wavesurferRef = useRef<WaveSurfer | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [currentIdx, setCurrentIdx] = useState(0);
+
+  // Build effective candidates list
+  const effectiveCandidates: AudioCandidate[] = candidates && candidates.length > 0
+    ? candidates
+    : audioUrl
+      ? [{ url: audioUrl, label: '第 1 首' }]
+      : [];
+
+  const currentCandidate = effectiveCandidates[currentIdx];
+  const currentUrl = currentCandidate?.url;
+  const hasMultiple = effectiveCandidates.length > 1;
+
+  // Switch track
+  const switchTrack = (newIdx: number) => {
+    if (newIdx < 0 || newIdx >= effectiveCandidates.length) return;
+    setCurrentIdx(newIdx);
+    setIsPlaying(false);
+    setCurrentTime(0);
+  };
 
   useEffect(() => {
-    if (!waveformRef.current || !audioUrl) return;
+    if (!waveformRef.current || !currentUrl) return;
+
+    // Destroy previous instance
+    wavesurferRef.current?.destroy();
 
     // Initialize WaveSurfer
     wavesurferRef.current = WaveSurfer.create({
@@ -35,7 +100,7 @@ export function MusicPlayer({ audioUrl, title, isGenerating, generationProgress 
       normalize: true,
     });
 
-    wavesurferRef.current.load(audioUrl);
+    wavesurferRef.current.load(currentUrl);
 
     wavesurferRef.current.on('ready', () => {
       setDuration(wavesurferRef.current?.getDuration() || 0);
@@ -56,7 +121,12 @@ export function MusicPlayer({ audioUrl, title, isGenerating, generationProgress 
     return () => {
       wavesurferRef.current?.destroy();
     };
-  }, [audioUrl]);
+  }, [currentUrl]);
+
+  // Reset index when candidates change
+  useEffect(() => {
+    setCurrentIdx(0);
+  }, [effectiveCandidates.length]);
 
   const togglePlay = () => {
     wavesurferRef.current?.playPause();
@@ -74,18 +144,21 @@ export function MusicPlayer({ audioUrl, title, isGenerating, generationProgress 
   };
 
   const handleDownload = () => {
-    if (!audioUrl) return;
-    const safeTitle = title
-      ? title.replace(/[/\\:*?"<>|]/g, '_').replace(/\s+/g, '_')
-      : `melo-music-${Date.now()}`;
-    const downloadUrl = `/api/download-song?url=${encodeURIComponent(audioUrl)}&filename=${encodeURIComponent(safeTitle + '.mp3')}`;
+    if (!currentUrl) return;
+    const filename = buildDownloadFilename(
+      title || 'melo-music',
+      provider || 'ai',
+      currentIdx,
+      currentUrl
+    );
+    const downloadUrl = `/api/download-song?url=${encodeURIComponent(currentUrl)}&filename=${encodeURIComponent(filename)}`;
     window.open(downloadUrl, '_self');
   };
 
   const handleShare = async () => {
-    if (!audioUrl) return;
+    if (!currentUrl) return;
     try {
-      await navigator.clipboard.writeText(audioUrl);
+      await navigator.clipboard.writeText(currentUrl);
       alert('链接已复制到剪贴板');
     } catch {
       alert('复制失败，请手动复制链接');
@@ -136,7 +209,7 @@ export function MusicPlayer({ audioUrl, title, isGenerating, generationProgress 
     );
   }
 
-  if (!audioUrl) {
+  if (!currentUrl) {
     return (
       <div className="glass-card p-6">
         <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
@@ -156,10 +229,37 @@ export function MusicPlayer({ audioUrl, title, isGenerating, generationProgress 
 
   return (
     <div className="glass-card p-4">
-      <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-        <span className="text-primary">🎵</span>
-        音乐播放
-      </h3>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold flex items-center gap-2">
+          <span className="text-primary">🎵</span>
+          音乐播放
+        </h3>
+        {/* Candidate switcher */}
+        {hasMultiple && (
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => switchTrack(currentIdx - 1)}
+              disabled={currentIdx === 0}
+              className="p-1 rounded hover:bg-white/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              title="上一首"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="text-xs text-muted-foreground px-2 min-w-[60px] text-center">
+              {currentCandidate?.label || `第 ${currentIdx + 1} 首`}
+              <span className="ml-1 text-muted-foreground/50">({currentIdx + 1}/{effectiveCandidates.length})</span>
+            </span>
+            <button
+              onClick={() => switchTrack(currentIdx + 1)}
+              disabled={currentIdx === effectiveCandidates.length - 1}
+              className="p-1 rounded hover:bg-white/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              title="下一首"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* Waveform */}
       <div ref={waveformRef} className="mb-4 rounded-lg overflow-hidden" />
@@ -192,6 +292,17 @@ export function MusicPlayer({ audioUrl, title, isGenerating, generationProgress 
         {/* Buttons */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
+            {/* Prev candidate */}
+            {hasMultiple && (
+              <button
+                onClick={() => switchTrack(currentIdx - 1)}
+                disabled={currentIdx === 0}
+                className="p-2 rounded-full hover:bg-white/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                title="上一首候选"
+              >
+                <SkipBack className="w-4 h-4" />
+              </button>
+            )}
             <button
               onClick={() => seekTo(Math.max(0, currentTime - 10))}
               className="p-2 rounded-full hover:bg-white/10 transition-colors"
@@ -213,13 +324,24 @@ export function MusicPlayer({ audioUrl, title, isGenerating, generationProgress 
             >
               <SkipForward className="w-4 h-4" />
             </button>
+            {/* Next candidate */}
+            {hasMultiple && (
+              <button
+                onClick={() => switchTrack(currentIdx + 1)}
+                disabled={currentIdx === effectiveCandidates.length - 1}
+                className="p-2 rounded-full hover:bg-white/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                title="下一首候选"
+              >
+                <SkipForward className="w-4 h-4" />
+              </button>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
             <button
               onClick={handleDownload}
               className="p-2 rounded-full hover:bg-white/10 transition-colors"
-              title="下载"
+              title={`下载${hasMultiple ? ` (第 ${currentIdx + 1} 首)` : ''}`}
             >
               <Download className="w-4 h-4" />
             </button>

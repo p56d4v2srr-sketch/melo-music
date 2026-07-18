@@ -6,7 +6,7 @@
  * - prompt: string (1-2000) 必填
  * - lyrics?: string 可选
  * - instrumental?: boolean 可选
- * - model?: string 可选，默认 "TemPolor v4.6"（注意大小写和空格）
+ * - model?: string 可选，不传则上游使用默认模型（V5.8: 不再硬编码 TemPolor v4.6）
  * 
  * 返回：
  * - ok: true
@@ -25,7 +25,7 @@ const generateSchema = z.object({
   prompt: z.string().min(1, 'prompt 不能为空').max(2000, 'prompt 最多 2000 字符'),
   lyrics: z.string().max(5000).optional(),
   instrumental: z.boolean().optional().default(false),
-  model: z.string().optional().default('TemPolor v4.6'),  // 注意：大小写和空格敏感
+  model: z.string().optional().default('TemPolor v4.5'),
 });
 
 export async function POST(request: NextRequest) {
@@ -52,6 +52,20 @@ export async function POST(request: NextRequest) {
 
     const { prompt, lyrics, instrumental, model } = parseResult.data;
 
+    // V5.8: 白名单保护 - 如果传了 model 但不在已知有效列表中，使用默认值
+    // 实测有效 model 列表（2026-01 探测结果）
+    const KNOWN_VALID_MODELS = new Set<string>([
+      'TemPolor v4.5',
+      'TemPolor v4.0',
+      'TemPolor v3.5',
+      'TemPolor v3',
+    ]);
+    let effectiveModel = model;
+    if (!KNOWN_VALID_MODELS.has(model)) {
+      console.warn(`[PuLe] Invalid model "${model}", falling back to "TemPolor v4.5"`);
+      effectiveModel = 'TemPolor v4.5';
+    }
+
     // 歌词净化
     let sanitizedLyrics = lyrics || '';
     let removedCount = 0;
@@ -71,7 +85,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 兜底检查
-    // PuLe v4.6 是人声模型，即使是 instrumental 模式也需要非空 lyrics
+    // PuLe TemPolor v4.5 是人声模型，即使是 instrumental 模式也需要非空 lyrics
     // 如果净化后为空，统一塞 [Instrumental] 占位
     let lyricsForProvider = sanitizedLyrics;
     if (sanitizedLyrics.trim() === '') {
@@ -87,7 +101,7 @@ export async function POST(request: NextRequest) {
     // 调用 PuLe API
     const result = await generatePule({
       prompt,
-      model,
+      model: effectiveModel,
       lyrics: lyricsForProvider,
       instrumental,
     });

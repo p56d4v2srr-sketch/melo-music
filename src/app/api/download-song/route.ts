@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { readFile, stat } from 'fs/promises';
+import { extname, basename } from 'path';
+import { existsSync } from 'fs';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -14,11 +17,18 @@ const ALLOWED_HOSTS = [
   'storage.googleapis.com',
   'commondatastorage.googleapis.com',
   'api.acedata.cloud',
+  'data-sz.tianpuyue.cn',   // PuLe audio CDN
+  'media-pipe.api.tianpuyue.cn', // PuLe streaming
+  'tianpuyuecdn.com',       // PuLe CDN
+  'oss.yourmusic.fun',      // Suno proxy CDN
 ];
 
 // Wildcard patterns for subdomain matching (e.g., *.aliyuncs.com)
 const ALLOWED_HOST_PATTERNS = [
   /\.aliyuncs\.com$/,   // Aliyun OSS: xxx.oss-cn-hangzhou.aliyuncs.com
+  /\.tianpuyue\.cn$/,   // PuLe CDN: data-sz.tianpuyue.cn, media-pipe.api.tianpuyue.cn
+  /\.tianpuyuecdn\.com$/, // PuLe CDN
+  /\.yourmusic\.fun$/,  // Suno proxy (谱乐 AI)
 ];
 
 function sanitizeFilename(name: string): string {
@@ -28,6 +38,19 @@ function sanitizeFilename(name: string): string {
 function getAsciiFallback(filename: string): string {
   const ascii = filename.replace(/[^\x20-\x7E]/g, '_').replace(/_+/g, '_');
   return ascii || 'melo-download';
+}
+
+function getContentType(filePath: string): string {
+  const ext = extname(filePath).toLowerCase();
+  switch (ext) {
+    case '.wav': return 'audio/wav';
+    case '.mp3': return 'audio/mpeg';
+    case '.ogg': return 'audio/ogg';
+    case '.flac': return 'audio/flac';
+    case '.m4a': return 'audio/mp4';
+    case '.mp4': return 'video/mp4';
+    default: return 'application/octet-stream';
+  }
 }
 
 export async function GET(request: NextRequest) {
@@ -43,6 +66,28 @@ export async function GET(request: NextRequest) {
       { error: 'INVALID_URL' },
       { status: 400 }
     );
+  }
+
+  // Check if it's a local file path (for WAV conversion)
+  if (url.startsWith('/tmp/')) {
+    if (!existsSync(url)) {
+      return NextResponse.json({ error: 'FILE_NOT_FOUND' }, { status: 404 });
+    }
+    const fileStats = await stat(url);
+    const fileBuffer = await readFile(url);
+    const safeFilename = filename || basename(url);
+    const contentType = getContentType(url);
+    const asciiFilename = getAsciiFallback(safeFilename);
+    const encodedFilename = encodeURIComponent(safeFilename);
+
+    return new NextResponse(fileBuffer, {
+      headers: {
+        'Content-Type': contentType,
+        'Content-Length': fileStats.size.toString(),
+        'Content-Disposition': `attachment; filename="${asciiFilename}"; filename*=UTF-8''${encodedFilename}`,
+        'Cache-Control': 'public, max-age=86400',
+      },
+    });
   }
 
   // Parse and validate URL
@@ -72,8 +117,8 @@ export async function GET(request: NextRequest) {
   let safeFilename = filename || '';
   if (!safeFilename) {
     const urlPath = parsedUrl.pathname;
-    const basename = urlPath.split('/').pop() || '';
-    safeFilename = basename || `melo-${Date.now()}.mp3`;
+    const baseName = urlPath.split('/').pop() || '';
+    safeFilename = baseName || `melo-${Date.now()}.mp3`;
   }
   safeFilename = sanitizeFilename(safeFilename);
 

@@ -16,7 +16,7 @@ import { sanitizeLyrics } from './lyrics-sanitizer';
 
 export interface PuleGenerateParams {
   prompt: string;
-  model?: string;  // 默认 "TemPolor v4.6"（注意大小写和空格）
+  model?: string;  // V5.8: 不传则上游使用默认模型
   lyrics?: string;
   instrumental?: boolean;
   callback_url?: string;
@@ -136,12 +136,14 @@ export async function generatePule(params: PuleGenerateParams): Promise<PuleGene
   // 构建请求体
   const body: Record<string, unknown> = {
     prompt: params.prompt,
-    model: params.model || 'TemPolor v4.6',  // 注意：大小写和空格敏感
     callback_url: params.callback_url || getCallbackUrl(),
     action: null,
     upload_audio_url: null,
     style_negative: null,
   };
+
+  // V5.8: 使用实测有效的 model 字面串
+  body.model = params.model || 'TemPolor v4.5';
 
   // PuLe API 要求必须传 lyrics，即使是 instrumental 模式
   // instrumental 模式下用 [Instrumental] 占位

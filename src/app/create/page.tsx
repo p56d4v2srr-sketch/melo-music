@@ -41,12 +41,12 @@ const SUNO_VERSIONS = [
 
 // MiniMax 版本定义
 const MINIMAX_VERSIONS = [
-  { key: 'music-2.0', name: 'MiniMax music-2.0', desc: '同步返回 · 约 40 秒生成 · 原生 WAV 无损输出', credits: '免费', badge: '推荐' },
+  { key: 'music-2.0', name: 'MiniMax music-2.0', desc: '同步返回 · 约 40 秒生成 · 原生 WAV 无损输出', credits: '免费', badge: null },
 ];
 
 export default function CreatePage() {
   // Provider state
-  const [activeProvider, setActiveProvider] = useState<'minimax' | 'pule' | 'suno'>('minimax');
+  const [activeProvider, setActiveProvider] = useState<'minimax' | 'pule' | 'suno' | null>(null);
   
   // Suno-specific state
   const [sunoMode, setSunoMode] = useState<'prompt' | 'custom'>('custom');
@@ -320,6 +320,11 @@ export default function CreatePage() {
   };
 
   const handleGenerate = async () => {
+    if (!activeProvider) {
+      toast.error('请先选择一个模型');
+      return;
+    }
+
     if (selectedStyles.length === 0) {
       toast.error('请至少选择一个音乐风格');
       return;
@@ -454,7 +459,8 @@ export default function CreatePage() {
           prompt: prompt || '温暖治愈的中文流行',
           lyrics: lyrics || undefined,
           instrumental: vocalType === 'instrumental',
-          model: 'TemPolor v4.6',
+          // V5.8: 使用实测有效的 model 字面串
+          model: 'TemPolor v4.5',
         }),
       });
 
@@ -621,7 +627,8 @@ export default function CreatePage() {
                 key={tab.key}
                 onClick={() => {
                   if (tab.enabled) {
-                    setActiveProvider(tab.key as 'minimax' | 'pule' | 'suno');
+                    // Toggle: click selected tab to deselect
+                    setActiveProvider(prev => prev === tab.key ? null : tab.key as 'minimax' | 'pule' | 'suno');
                   }
                 }}
                 className={`
@@ -768,8 +775,16 @@ export default function CreatePage() {
           </div>
         )}
 
+        {/* Hint when no provider selected */}
+        {!activeProvider && (
+          <div className="mb-6 text-center py-8 glass-card rounded-xl">
+            <p className="text-lg text-muted-foreground">👆 请先选择一个模型</p>
+            <p className="text-sm text-muted-foreground/60 mt-2">点击上方 Provider 卡片开始创作</p>
+          </div>
+        )}
+
         {/* Three Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className={`grid grid-cols-1 lg:grid-cols-12 gap-6 ${!activeProvider ? 'opacity-40 pointer-events-none select-none' : ''}`}>
           {/* Left Column - Parameters */}
           <div className="lg:col-span-3 space-y-6">
             <MusicStyleSelector
@@ -887,6 +902,15 @@ export default function CreatePage() {
           <div className="lg:col-span-4 space-y-6">
             <MusicPlayer
               audioUrl={generatedAudioUrl}
+              candidates={
+                activeProvider === 'pule' && puleSongs.length > 0
+                  ? puleSongs.filter(s => s.audio_url).map((s, i) => ({ url: s.audio_url!, label: `第 ${i + 1} 首` }))
+                  : activeProvider === 'suno' && sunoSongs.length > 0
+                    ? sunoSongs.filter(s => s.audio_url).map((s, i) => ({ url: s.audio_url!, label: `第 ${i + 1} 首` }))
+                    : undefined
+              }
+              title={songTitle || undefined}
+              provider={activeProvider || undefined}
               isGenerating={isGenerating}
               generationProgress={generationProgress}
             />
@@ -1011,7 +1035,7 @@ export default function CreatePage() {
             {/* Generate Button */}
             <Button
               onClick={handleGenerate}
-              disabled={isGenerating}
+              disabled={isGenerating || !activeProvider}
               className="w-full py-6 text-lg font-semibold gradient-gold-purple hover:opacity-90 glow-gold disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isGenerating ? (
