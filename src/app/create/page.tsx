@@ -14,6 +14,12 @@ import { Button } from '@/components/ui/button';
 import { Sparkles, Loader2, AlertTriangle } from 'lucide-react';
 import { analyzeLyrics, type LyricsSegment } from '@/lib/lyrics-sanitizer';
 
+// Provider tab 定义（顶层切换）
+const PROVIDER_TABS = [
+  { key: 'minimax', name: 'MiniMax · 快', subtitle: '~1min · 免费', enabled: true },
+  { key: 'pule', name: 'PuLe · 精品', subtitle: '~90s · ¥0.3/首 · 5min · 时间戳歌词', enabled: true },
+];
+
 // 模型系列 tab 定义
 const MODEL_TABS = [
   { key: 'minimax', name: 'MiniMax（海螺音乐）', enabled: true },
@@ -38,6 +44,9 @@ const MINIMAX_VERSIONS = [
 ];
 
 export default function CreatePage() {
+  // Provider state
+  const [activeProvider, setActiveProvider] = useState<'minimax' | 'pule'>('minimax');
+  
   // State
   const [activeModelTab, setActiveModelTab] = useState('minimax');
   const [selectedModelVersion, setSelectedModelVersion] = useState('music-2.0');
@@ -64,6 +73,20 @@ export default function CreatePage() {
     descriptionCount: number;
   }>({ segments: [], structureCount: 0, descriptionCount: 0 });
 
+  // PuLe-specific state
+  const [puleItemIds, setPuleItemIds] = useState<string[]>([]);
+  const [puleSongs, setPuleSongs] = useState<Array<{
+    item_id: string;
+    status: 'running' | 'main_succeeded' | 'succeeded' | 'part_failed' | 'failed';
+    audio_url?: string;
+    audio_hi_url?: string;
+    streamAudioUrl?: string;
+    lyrics?: string;
+    duration?: number;
+  }>>([]);
+  const [pulePollingStatus, setPulePollingStatus] = useState<'idle' | 'submitted' | 'polling' | 'succeeded' | 'failed'>('idle');
+  const [pulePollingMessage, setPulePollingMessage] = useState('');
+
   // Auto-analyze lyrics when they change
   useEffect(() => {
     const segments = analyzeLyrics(lyrics);
@@ -73,6 +96,93 @@ export default function CreatePage() {
       descriptionCount: segments.filter(s => s.type === 'description').length,
     });
   }, [lyrics]);
+
+  // PuLe polling logic
+  useEffect(() => {
+    if (pulePollingStatus !== 'polling' || puleItemIds.length === 0) return;
+
+    let pollTimer: NodeJS.Timeout;
+    let startTime = Date.now();
+    const POLL_INTERVAL = 2000; // 2s
+    const POLL_TIMEOUT = 300000; // 5min
+    const INITIAL_DELAY = 20000; // 20s before first poll
+
+    const poll = async () => {
+      const elapsed = Date.now() - startTime;
+      
+      // Check timeout
+      if (elapsed > POLL_TIMEOUT) {
+        setPulePollingStatus('failed');
+        setPulePollingMessage('生成超时，请重试');
+        toast.error('PuLe 生成超时', { description: '已超过 5 分钟，请重试' });
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/pule-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ item_ids: puleItemIds }),
+        });
+
+        const data = await res.json();
+
+        if (!data.ok) {
+          throw new Error(data.message || '查询失败');
+        }
+
+        setPuleSongs(data.songs);
+
+        // Check status of all songs
+        const allSucceeded = data.songs.every((s: { status: string }) => s.status === 'succeeded');
+        const anyMainSucceeded = data.songs.some((s: { status: string }) => s.status === 'main_succeeded' || s.status === 'succeeded');
+        const anyFailed = data.songs.some((s: { status: string }) => s.status === 'failed' || s.status === 'part_failed');
+
+        if (allSucceeded) {
+          setPulePollingStatus('succeeded');
+          setPulePollingMessage('高清版生成完成');
+          // Use the first succeeded song's audio_url
+          const succeededSong = data.songs.find((s: { status: string }) => s.status === 'succeeded');
+          if (succeededSong?.audio_url) {
+            setGeneratedAudioUrl(succeededSong.audio_url);
+          }
+          toast.success('PuLe 生成完成', { description: '高清版已就绪' });
+        } else if (anyMainSucceeded && !anyFailed) {
+          // Stream version available, HD still generating
+          setPulePollingMessage('流式播放可用，高清版生成中...');
+          const streamSong = data.songs.find((s: { status: string }) => s.status === 'main_succeeded' || s.status === 'succeeded');
+          if (streamSong?.streamAudioUrl && !generatedAudioUrl) {
+            setGeneratedAudioUrl(streamSong.streamAudioUrl);
+            toast.info('流式版本已就绪', { description: '高清版仍在生成中...' });
+          }
+          // Continue polling
+          pollTimer = setTimeout(poll, POLL_INTERVAL);
+        } else if (anyFailed) {
+          setPulePollingStatus('failed');
+          setPulePollingMessage('生成失败');
+          toast.error('PuLe 生成失败', { description: '部分歌曲生成失败，请重试' });
+        } else {
+          // Still running, continue polling
+          const runningCount = data.songs.filter((s: { status: string }) => s.status === 'running').length;
+          setPulePollingMessage(`生成中...（${data.songs.length - runningCount}/${data.songs.length} 完成）`);
+          pollTimer = setTimeout(poll, POLL_INTERVAL);
+        }
+      } catch (err) {
+        console.error('[PuLe] Poll error:', err);
+        // Continue polling on transient errors
+        pollTimer = setTimeout(poll, POLL_INTERVAL);
+      }
+    };
+
+    // Initial delay before first poll
+    const initialTimer = setTimeout(poll, INITIAL_DELAY);
+    setPulePollingMessage('已提交任务，等待 20 秒后开始查询...');
+
+    return () => {
+      clearTimeout(initialTimer);
+      clearTimeout(pollTimer);
+    };
+  }, [pulePollingStatus, puleItemIds, generatedAudioUrl]);
 
   const handleModelTabClick = (tabKey: string) => {
     const tab = MODEL_TABS.find(t => t.key === tabKey);
@@ -94,6 +204,12 @@ export default function CreatePage() {
       return;
     }
 
+    // Route to PuLe if selected
+    if (activeProvider === 'pule') {
+      return handleGeneratePule();
+    }
+
+    // MiniMax flow (existing logic)
     setIsGenerating(true);
     setGenerationProgress(0);
     setGeneratedAudioUrl(undefined);
@@ -181,6 +297,75 @@ export default function CreatePage() {
     }
   };
 
+  // PuLe generate handler
+  const handleGeneratePule = async () => {
+    setIsGenerating(true);
+    setGenerationProgress(0);
+    setGeneratedAudioUrl(undefined);
+    setPuleSongs([]);
+    setPuleItemIds([]);
+    setPulePollingStatus('idle');
+    setPulePollingMessage('');
+
+    try {
+      // Build prompt from styles and description
+      const prompt = [
+        description,
+        selectedStyles.length > 0 ? `风格：${selectedStyles.join(', ')}` : '',
+        vocalType === 'male' ? '男声' : vocalType === 'female' ? '女声' : '',
+        mood ? `情绪：${mood}` : '',
+      ].filter(Boolean).join('，');
+
+      const response = await fetch('/api/pule-generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: prompt || '温暖治愈的中文流行',
+          lyrics: lyrics || undefined,
+          instrumental: vocalType === 'instrumental',
+          model: 'tempolor-v4.6',
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!data.ok) {
+        const code = data.code || 'UNKNOWN';
+        const message = data.message || '生成失败';
+        
+        if (code === 'INSUFFICIENT_BALANCE') {
+          toast.error('PuLe 余额不足', { description: '请联系管理员充值' });
+        } else if (code === 'AUTH_ERROR') {
+          toast.error('PuLe 认证失败', { description: 'API Key 无效' });
+        } else if (code === 'EMPTY_LYRICS') {
+          toast.error('歌词为空', { description: '非纯音乐模式必须提供歌词' });
+        } else {
+          toast.error('PuLe 生成失败', { description: message });
+        }
+        setIsGenerating(false);
+        return;
+      }
+
+      // Success - got item_ids
+      setPuleItemIds(data.item_ids);
+      setPulePollingStatus('polling');
+      setGenerationProgress(10);
+      
+      const sanitizeInfo = data.lyricsSanitize;
+      const removedCount = sanitizeInfo?.removedCount ?? 0;
+      const toastDesc = removedCount > 0
+        ? `已提交 ${data.item_ids.length} 首，净化 ${removedCount} 处描述词`
+        : `已提交 ${data.item_ids.length} 首`;
+      toast.success('PuLe 任务已提交', { description: toastDesc });
+
+    } catch (error) {
+      console.error('[PuLe] Generate error:', error);
+      toast.error('PuLe 生成失败', { description: '网络异常，请检查网络连接后重试' });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const handleVoiceUpload = (voice: VoiceFile) => {
     setUploadedVoices([...uploadedVoices, voice]);
   };
@@ -211,7 +396,39 @@ export default function CreatePage() {
           </p>
         </div>
 
-        {/* Model Series Tabs */}
+        {/* Provider Tabs (Top Level) */}
+        <div className="mb-6">
+          <div className="flex items-center gap-3">
+            {PROVIDER_TABS.map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => {
+                  if (tab.enabled) {
+                    setActiveProvider(tab.key as 'minimax' | 'pule');
+                  }
+                }}
+                className={`
+                  relative flex-1 max-w-xs px-5 py-3 rounded-xl transition-all text-left
+                  ${!tab.enabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+                  ${activeProvider === tab.key && tab.enabled
+                    ? 'border-2 border-amber-400 bg-amber-400/5 shadow-[0_0_20px_rgba(212,175,55,0.15)]'
+                    : 'border border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20'
+                  }
+                `}
+              >
+                <h3 className={`text-sm font-bold mb-0.5 ${activeProvider === tab.key ? 'text-amber-400' : 'text-foreground'}`}>
+                  {tab.name}
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  {tab.subtitle}
+                </p>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Model Series Tabs (only show for MiniMax provider) */}
+        {activeProvider === 'minimax' && (
         <div className="mb-6">
           <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
             {MODEL_TABS.map((tab) => (
@@ -237,6 +454,7 @@ export default function CreatePage() {
             ))}
           </div>
         </div>
+        )}
 
         {/* Suno Version Cards (only show when Suno tab is active) */}
         {activeModelTab === 'suno' && (
@@ -455,6 +673,57 @@ export default function CreatePage() {
               isGenerating={isGenerating}
               generationProgress={generationProgress}
             />
+
+            {/* PuLe Status Display */}
+            {activeProvider === 'pule' && pulePollingStatus !== 'idle' && (
+              <div className="glass-card p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  {pulePollingStatus === 'polling' && (
+                    <Loader2 className="w-4 h-4 text-amber-400 animate-spin" />
+                  )}
+                  {pulePollingStatus === 'succeeded' && (
+                    <span className="w-4 h-4 rounded-full bg-green-500/20 flex items-center justify-center">
+                      <span className="w-2 h-2 rounded-full bg-green-500" />
+                    </span>
+                  )}
+                  {pulePollingStatus === 'failed' && (
+                    <AlertTriangle className="w-4 h-4 text-red-400" />
+                  )}
+                  <span className="text-sm font-medium text-foreground">
+                    {pulePollingStatus === 'polling' && '生成中'}
+                    {pulePollingStatus === 'succeeded' && '生成完成'}
+                    {pulePollingStatus === 'failed' && '生成失败'}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground mb-3">
+                  {pulePollingMessage}
+                </p>
+                
+                {/* Song status list */}
+                {puleSongs.length > 0 && (
+                  <div className="space-y-2">
+                    {puleSongs.map((song) => (
+                      <div key={song.item_id} className="flex items-center justify-between p-2 rounded-lg bg-white/5">
+                        <span className="text-xs text-muted-foreground font-mono">
+                          {song.item_id.slice(0, 8)}...
+                        </span>
+                        <span className={`text-xs px-2 py-0.5 rounded ${
+                          song.status === 'succeeded' ? 'bg-green-500/20 text-green-400' :
+                          song.status === 'main_succeeded' ? 'bg-amber-500/20 text-amber-400' :
+                          song.status === 'running' ? 'bg-blue-500/20 text-blue-400' :
+                          'bg-red-500/20 text-red-400'
+                        }`}>
+                          {song.status === 'succeeded' ? '高清完成' :
+                           song.status === 'main_succeeded' ? '流式可用' :
+                           song.status === 'running' ? '生成中' :
+                           '失败'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Generate Button */}
             <Button
