@@ -71,27 +71,24 @@ export async function POST(request: NextRequest) {
     }
 
     // 兜底检查
-    if (instrumental) {
-      // instrumental 模式下，如果歌词净化后为空，不传 lyrics
-      if (sanitizedLyrics.trim() === '') {
-        sanitizedLyrics = '';
-        console.log('[pule-generate] Instrumental mode with empty lyrics, proceeding without lyrics');
-      }
-    } else {
-      // 非 instrumental 模式，歌词不能为空
-      if (sanitizedLyrics.trim() === '') {
-        return NextResponse.json(
-          { ok: false, code: 'EMPTY_LYRICS', message: '歌词净化后为空，请提供有效歌词或选择纯音乐模式' },
-          { status: 400 }
-        );
-      }
+    // PuLe v4.6 是人声模型，即使是 instrumental 模式也需要非空 lyrics
+    // 如果净化后为空，统一塞 [Instrumental] 占位
+    let lyricsForProvider = sanitizedLyrics;
+    if (sanitizedLyrics.trim() === '') {
+      lyricsForProvider = '[Instrumental]';
+      console.log('[pule-generate] Empty lyrics after sanitize, using [Instrumental] placeholder');
+    }
+    
+    // 非 instrumental 模式且用户提供了歌词但净化后为空，给个警告
+    if (!instrumental && lyrics && sanitizedLyrics.trim() === '') {
+      console.log('[pule-generate] Warning: lyrics became empty after sanitize for non-instrumental mode');
     }
 
     // 调用 PuLe API
     const result = await generatePule({
       prompt,
       model,
-      lyrics: instrumental ? undefined : sanitizedLyrics,
+      lyrics: lyricsForProvider,
       instrumental,
     });
 

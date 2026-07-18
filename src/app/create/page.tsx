@@ -454,7 +454,7 @@ export default function CreatePage() {
           prompt: prompt || '温暖治愈的中文流行',
           lyrics: lyrics || undefined,
           instrumental: vocalType === 'instrumental',
-          model: 'tempolor-v4.6',
+          model: 'TemPolor v4.6',
         }),
       });
 
@@ -574,7 +574,10 @@ export default function CreatePage() {
 
     } catch (error) {
       console.error('[Suno] Generate error:', error);
-      toast.error('Suno 生成失败', { description: '网络异常，请检查网络连接后重试' });
+      const errMsg = error instanceof Error
+        ? error.message
+        : (typeof error === 'string' ? error : JSON.stringify(error));
+      toast.error('Suno 生成失败', { description: errMsg || '网络异常，请检查网络连接后重试' });
     } finally {
       setIsGenerating(false);
     }

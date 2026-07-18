@@ -65,7 +65,11 @@ export class SunoApiError extends Error {
 }
 
 function getErrorMessage(statusCode: number, body: any): string {
-  const serverMessage = body?.message || body?.error || '未知错误';
+  // 确保 serverMessage 是字符串，避免 [object Object]
+  const rawMessage = body?.message || body?.error || '未知错误';
+  const serverMessage = typeof rawMessage === 'string' 
+    ? rawMessage 
+    : JSON.stringify(rawMessage);
   
   switch (statusCode) {
     case 401:

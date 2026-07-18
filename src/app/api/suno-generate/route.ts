@@ -56,23 +56,25 @@ export async function POST(request: NextRequest) {
     
     // 歌词净化（custom 模式）
     let lyricsSanitize = undefined;
+    let sanitizedLyrics = lyrics;
     if (mode === 'custom' && lyrics?.trim()) {
       const sanitizeResult = sanitizeLyrics(lyrics);
+      sanitizedLyrics = sanitizeResult.sanitized;
       lyricsSanitize = {
         removedCount: sanitizeResult.removedCount,
         removedSamples: sanitizeResult.removedSamples,
       };
       
       // 非纯乐器模式，净化后歌词为空则报错
-      if (!instrumental && !sanitizeResult.sanitized.trim()) {
+      if (!instrumental && !sanitizedLyrics.trim()) {
         return NextResponse.json(
-          { ok: false, code: 'VALIDATION_ERROR', message: '歌词净化后为空，请提供有效歌词或勾选纯乐器' },
+          { ok: false, code: 'EMPTY_LYRICS', message: '歌词净化后为空，请提供有效歌词或勾选纯乐器' },
           { status: 400 }
         );
       }
     } else if (mode === 'custom' && !instrumental && !lyrics?.trim()) {
       return NextResponse.json(
-        { ok: false, code: 'VALIDATION_ERROR', message: '需要提供歌词或勾选纯乐器' },
+        { ok: false, code: 'EMPTY_LYRICS', message: '需要提供歌词或勾选纯乐器' },
         { status: 400 }
       );
     }
@@ -82,7 +84,7 @@ export async function POST(request: NextRequest) {
       mode,
       prompt,
       title,
-      lyrics,
+      lyrics: sanitizedLyrics,  // 使用净化后的歌词
       tags,
       instrumental,
       model,
