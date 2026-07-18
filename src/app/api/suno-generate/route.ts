@@ -75,10 +75,11 @@ export async function POST(request: NextRequest) {
     let sanitizedLyrics = lyrics;
     if (mode === 'custom' && lyrics?.trim()) {
       const sanitizeResult = sanitizeLyrics(lyrics);
-      sanitizedLyrics = sanitizeResult.sanitized;
+      sanitizedLyrics = sanitizeResult.cleaned;
       lyricsSanitize = {
-        removedCount: sanitizeResult.removedCount,
-        removedSamples: sanitizeResult.removedSamples,
+        bracketTags: sanitizeResult.bracketTags,
+        structureTagCount: sanitizeResult.structureTagCount,
+        totalLines: sanitizeResult.totalLines,
       };
       
       // 非纯乐器模式，净化后歌词为空则报错

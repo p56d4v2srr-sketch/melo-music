@@ -68,19 +68,19 @@ export async function POST(request: NextRequest) {
 
     // 歌词净化
     let sanitizedLyrics = lyrics || '';
-    let removedCount = 0;
-    let removedSamples: string[] = [];
+    let bracketTagCount = 0;
+    let bracketTags: string[] = [];
 
     if (lyrics) {
       const sanitizeResult = sanitizeLyrics(lyrics);
-      sanitizedLyrics = sanitizeResult.sanitized;
-      removedCount = sanitizeResult.removedCount;
-      removedSamples = sanitizeResult.removedSamples;
+      sanitizedLyrics = sanitizeResult.cleaned;
+      bracketTagCount = sanitizeResult.structureTagCount;
+      bracketTags = sanitizeResult.bracketTags;
       
       console.log('[pule-generate] Lyrics sanitized:', {
         original_length: lyrics.length,
-        sanitized_length: sanitizedLyrics.length,
-        removedCount,
+        cleaned_length: sanitizedLyrics.length,
+        bracketTagCount,
       });
     }
 
@@ -111,8 +111,8 @@ export async function POST(request: NextRequest) {
       provider: 'pule',
       item_ids: result.item_ids,
       lyricsSanitize: {
-        removedCount,
-        removedSamples,
+        bracketTags,
+        structureTagCount: bracketTagCount,
       },
     });
   } catch (err) {

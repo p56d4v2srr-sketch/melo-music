@@ -125,11 +125,11 @@ export async function generatePule(params: PuleGenerateParams): Promise<PuleGene
   let sanitizedLyrics: string | undefined;
   if (params.lyrics) {
     const result = sanitizeLyrics(params.lyrics);
-    sanitizedLyrics = result.sanitized;
+    sanitizedLyrics = result.cleaned;
     console.log('[PuLe] Lyrics sanitized:', {
       original_length: params.lyrics.length,
-      sanitized_length: sanitizedLyrics.length,
-      removedCount: result.removedCount,
+      cleaned_length: sanitizedLyrics.length,
+      bracketTagCount: result.structureTagCount,
     });
   }
 
@@ -270,7 +270,7 @@ export async function queryPuleSongs(itemIds: string[]): Promise<PuleQueryRespon
       let sanitizedLyrics = item.lyrics;
       if (item.lyrics) {
         const result = sanitizeLyrics(item.lyrics);
-        sanitizedLyrics = result.sanitized;
+        sanitizedLyrics = result.cleaned;
       }
 
       return {

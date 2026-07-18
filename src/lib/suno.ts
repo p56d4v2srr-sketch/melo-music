@@ -127,7 +127,7 @@ export async function generateSuno(params: SunoGenerateParams): Promise<SunoGene
     let sanitizedLyrics = params.lyrics;
     if (params.lyrics?.trim()) {
       const sanitizeResult = sanitizeLyrics(params.lyrics);
-      sanitizedLyrics = sanitizeResult.sanitized;
+      sanitizedLyrics = sanitizeResult.cleaned;
       
       // 非纯乐器模式，净化后歌词为空则报错
       if (!params.instrumental && !sanitizedLyrics.trim()) {
@@ -190,7 +190,7 @@ export async function generateSuno(params: SunoGenerateParams): Promise<SunoGene
       data.songs = data.songs.map((song: SunoSong) => {
         if (song.lyric) {
           const sanitized = sanitizeLyrics(song.lyric);
-          return { ...song, lyric: sanitized.sanitized };
+          return { ...song, lyric: sanitized.cleaned };
         }
         return song;
       });
@@ -267,7 +267,7 @@ export async function querySunoSongs(songIds: string[]): Promise<SunoSong[]> {
     songs = songs.map((song) => {
       if (song.lyric) {
         const sanitized = sanitizeLyrics(song.lyric);
-        return { ...song, lyric: sanitized.sanitized };
+        return { ...song, lyric: sanitized.cleaned };
       }
       return song;
     });

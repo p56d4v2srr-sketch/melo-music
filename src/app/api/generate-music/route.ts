@@ -59,13 +59,13 @@ export async function POST(request: NextRequest) {
 
     // 歌词净化：去除方括号标签，避免 MiniMax 报错
     const sanitizeResult = lyrics ? sanitizeLyrics(lyrics) : undefined;
-    const sanitizedLyrics = sanitizeResult?.sanitized;
+    const sanitizedLyrics = sanitizeResult?.cleaned;
     const hasBrackets = lyrics ? /\[.*?\]/.test(lyrics) : false;
     console.log('[generate-music] Lyrics sanitized:', { 
       original: lyrics?.slice(0, 50) + '...', 
-      sanitized: sanitizedLyrics?.slice(0, 50) + '...',
+      cleaned: sanitizedLyrics?.slice(0, 50) + '...',
       hasBrackets,
-      removedCount: sanitizeResult?.removedCount ?? 0
+      bracketTagCount: sanitizeResult?.structureTagCount ?? 0
     });
 
     // V5.4 兜底：is_instrumental 且歌词净化后为空串时，塞 [Instrumental] 占位
@@ -126,8 +126,8 @@ export async function POST(request: NextRequest) {
       const music = songsArray[0];
       // 对返回的歌词也做净化（防止 provider 返回带方括号的歌词）
       const returnSanitize = music.lyric ? sanitizeLyrics(music.lyric) : undefined;
-      const finalLyrics = returnSanitize?.sanitized || sanitizedLyrics || null;
-      // 使用原始输入的净化结果作为分析数据（provider 返回的歌词已被清理，removedCount=0）
+      const finalLyrics = returnSanitize?.cleaned || sanitizedLyrics || null;
+      // 使用原始输入的净化结果作为分析数据
       const analysisResult = sanitizeResult;
       
       return NextResponse.json({
@@ -142,15 +142,15 @@ export async function POST(request: NextRequest) {
         lyric: finalLyrics,
         sanitized_lyrics: finalLyrics,
         lyrics_analysis: analysisResult ? {
-          segments: analysisResult.segments,
-          removedCount: analysisResult.removedCount,
-          removedSamples: analysisResult.removedSamples
+          bracketTags: analysisResult.bracketTags,
+          structureTagCount: analysisResult.structureTagCount,
+          totalLines: analysisResult.totalLines,
         } : null,
-        // V5.4 spec 要求的驼峰命名字段
         lyricsSanitize: analysisResult ? {
-          removedCount: analysisResult.removedCount,
-          removedSamples: analysisResult.removedSamples
-        } : { removedCount: 0, removedSamples: [] },
+          bracketTags: analysisResult.bracketTags,
+          structureTagCount: analysisResult.structureTagCount,
+          totalLines: analysisResult.totalLines,
+        } : { bracketTags: [], structureTagCount: 0, totalLines: 0 },
         title: music.title,
         language: language || 'zh',
         vocal_type: vocal_type || 'female',
@@ -172,15 +172,15 @@ export async function POST(request: NextRequest) {
       lyric: sanitizedLyrics || null,
       sanitized_lyrics: sanitizedLyrics || null,
       lyrics_analysis: sanitizeResult ? {
-        segments: sanitizeResult.segments,
-        removedCount: sanitizeResult.removedCount,
-        removedSamples: sanitizeResult.removedSamples
+        bracketTags: sanitizeResult.bracketTags,
+        structureTagCount: sanitizeResult.structureTagCount,
+        totalLines: sanitizeResult.totalLines,
       } : null,
-      // V5.4 spec 要求的驼峰命名字段
       lyricsSanitize: sanitizeResult ? {
-        removedCount: sanitizeResult.removedCount,
-        removedSamples: sanitizeResult.removedSamples
-      } : { removedCount: 0, removedSamples: [] },
+        bracketTags: sanitizeResult.bracketTags,
+        structureTagCount: sanitizeResult.structureTagCount,
+        totalLines: sanitizeResult.totalLines,
+      } : { bracketTags: [], structureTagCount: 0, totalLines: 0 },
       language: language || 'zh',
       vocal_type: vocal_type || 'female',
       mood: mood || null,

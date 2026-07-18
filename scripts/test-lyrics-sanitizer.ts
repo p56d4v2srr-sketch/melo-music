@@ -3,7 +3,7 @@
  * 运行: npx tsx scripts/test-lyrics-sanitizer.ts
  */
 
-import { sanitizeLyrics, analyzeLyrics, isStructureTag } from '../src/lib/lyrics-sanitizer';
+import { sanitizeLyrics, analyzeLyrics } from '../src/lib/lyrics-sanitizer';
 
 let passed = 0;
 let failed = 0;
@@ -29,203 +29,108 @@ Hello world
 [Chorus]
 La la la`;
   const result = sanitizeLyrics(input);
-  assertEqual(result.sanitized, input, '结构标签和文本完整保留');
-  assertEqual(result.removedCount, 0, '无描述词被剔除');
-  assertEqual(result.removedSamples, [], 'removedSamples 为空');
+  assertEqual(result.cleaned, input, 'cleaned 等于原始输入');
+  assertEqual(result.structureTagCount, 2, '识别到 2 个标签');
+  assertEqual(result.bracketTags, ['[Verse]', '[Chorus]'], '标签列表正确');
 }
 
-console.log('\n=== Test 2: 描述词被剔除 ===');
+console.log('\n=== Test 2: 配器描述标签保留 ===');
 {
   const input = `[Verse]
 Hello world
-[温柔地]
-[Chorus]
-La la la
-[钢琴伴奏]`;
-  const result = sanitizeLyrics(input);
-  assertEqual(result.removedCount, 2, '2个描述词被剔除');
-  assertEqual(result.removedSamples, ['[温柔地]', '[钢琴伴奏]'], 'removedSamples 正确');
-  assertEqual(result.sanitized.includes('[温柔地]'), false, 'sanitized 不含 [温柔地]');
-  assertEqual(result.sanitized.includes('[钢琴伴奏]'), false, 'sanitized 不含 [钢琴伴奏]');
-  assertEqual(result.sanitized.includes('[Verse]'), true, 'sanitized 保留 [Verse]');
-  assertEqual(result.sanitized.includes('[Chorus]'), true, 'sanitized 保留 [Chorus]');
-}
-
-console.log('\n=== Test 3: 中文别名 ===');
-{
-  const input = `[主歌]
-第一句歌词
-[副歌]
-副歌歌词
-[前奏]
-[间奏]
-[尾奏]`;
-  const result = sanitizeLyrics(input);
-  assertEqual(result.removedCount, 0, '中文结构标签全部保留');
-  assertEqual(result.sanitized.includes('[主歌]'), true, '保留 [主歌]');
-  assertEqual(result.sanitized.includes('[副歌]'), true, '保留 [副歌]');
-  assertEqual(result.sanitized.includes('[前奏]'), true, '保留 [前奏]');
-  assertEqual(result.sanitized.includes('[间奏]'), true, '保留 [间奏]');
-  assertEqual(result.sanitized.includes('[尾奏]'), true, '保留 [尾奏]');
-}
-
-console.log('\n=== Test 4: 嵌套方括号 ===');
-{
-  const input = `[Verse [温柔地] 1]
-Hello world`;
-  const result = sanitizeLyrics(input);
-  // 最外层 [Verse [温柔地] 1] 被当作一个整体
-  // 内部 "Verse [温柔地] 1" 不是结构标签（因为包含 [温柔地]）
-  // 所以整个被当作描述词剔除
-  assertEqual(result.removedCount, 1, '嵌套方括号整体被当作描述词');
-}
-
-console.log('\n=== Test 5: 未闭合方括号 ===');
-{
-  const input = `[Verse
-Hello world
+[Instrumental 晨间鸟鸣 远处钟声 风铃轻摇]
 [Chorus]
 La la la`;
   const result = sanitizeLyrics(input);
-  // 第一个 [Verse 未闭合，视为普通文本
-  // [Chorus] 是结构标签，保留
-  assertEqual(result.sanitized.includes('[Verse'), true, '未闭合的 [Verse 作为文本保留');
-  assertEqual(result.sanitized.includes('[Chorus]'), true, '[Chorus] 作为结构标签保留');
+  assertEqual(result.cleaned, input, 'cleaned 等于原始输入，配器描述完整保留');
+  assertEqual(result.structureTagCount, 3, '识别到 3 个标签');
+  assertEqual(result.bracketTags.includes('[Instrumental 晨间鸟鸣 远处钟声 风铃轻摇]'), true, '配器描述标签在列表中');
 }
 
-console.log('\n=== Test 6: 空输入 ===');
+console.log('\n=== Test 3: 混合标签保留 ===');
+{
+  const input = `[Chorus Outro 渐弱]
+风吹过原野
+[Intro]
+阳光洒落`;
+  const result = sanitizeLyrics(input);
+  assertEqual(result.cleaned, input, 'cleaned 等于原始输入');
+  assertEqual(result.structureTagCount, 2, '识别到 2 个标签');
+  assertEqual(result.bracketTags, ['[Chorus Outro 渐弱]', '[Intro]'], '标签列表正确');
+}
+
+console.log('\n=== Test 4: 空输入 ===');
 {
   const result = sanitizeLyrics('');
-  assertEqual(result.sanitized, '', '空输入返回空字符串');
-  assertEqual(result.segments, [], '空输入 segments 为空');
-  assertEqual(result.removedCount, 0, '空输入 removedCount 为 0');
+  assertEqual(result.cleaned, '', 'cleaned 为空字符串');
+  assertEqual(result.structureTagCount, 0, '无标签');
+  assertEqual(result.bracketTags, [], '标签列表为空');
+  assertEqual(result.totalLines, 0, '总行数为 0');
 }
 
-console.log('\n=== Test 7: 纯文本无方括号 ===');
+console.log('\n=== Test 5: 纯文本无标签 ===');
 {
-  const input = 'Just some plain text\nNo brackets here';
+  const input = `风吹过原野
+阳光洒落大地`;
   const result = sanitizeLyrics(input);
-  assertEqual(result.sanitized, input, '纯文本完整保留');
-  assertEqual(result.removedCount, 0, '无描述词被剔除');
+  assertEqual(result.cleaned, input, 'cleaned 等于原始输入');
+  assertEqual(result.structureTagCount, 0, '无标签');
+  assertEqual(result.bracketTags, [], '标签列表为空');
+  assertEqual(result.totalLines, 2, '总行数为 2');
 }
 
-console.log('\n=== Test 8: isStructureTag 边界测试 ===');
+console.log('\n=== Test 6: analyzeLyrics 别名 ===');
 {
-  // 结构标签
-  assertEqual(isStructureTag('Verse'), true, 'Verse 是结构标签');
-  assertEqual(isStructureTag('verse'), true, 'verse 是结构标签');
-  assertEqual(isStructureTag('VERSE'), true, 'VERSE 是结构标签');
-  assertEqual(isStructureTag('Verse 1'), true, 'Verse 1 是结构标签');
-  assertEqual(isStructureTag('Chorus2'), true, 'Chorus2 是结构标签');
-  assertEqual(isStructureTag('主歌'), true, '主歌 是结构标签');
-  assertEqual(isStructureTag('副歌 1'), true, '副歌 1 是结构标签');
-  
-  // 描述词
-  assertEqual(isStructureTag('温柔地'), false, '温柔地 不是结构标签');
-  assertEqual(isStructureTag('钢琴伴奏'), false, '钢琴伴奏 不是结构标签');
-  assertEqual(isStructureTag('女声哼唱'), false, '女声哼唱 不是结构标签');
-  assertEqual(isStructureTag('高潮部分'), false, '高潮部分 不是结构标签');
-  assertEqual(isStructureTag('渐强'), false, '渐强 不是结构标签');
-}
-
-console.log('\n=== Test 9: 复杂混合场景 ===');
-{
-  const input = `[Intro]
-[钢琴独奏]
-[Verse 1]
-月光洒在窗前
-[温柔地]
-思念化成诗篇
-[Chorus]
-[高潮部分]
-爱你的心不变
-[渐强]
-直到永远`;
-  const result = sanitizeLyrics(input);
-  // 保留: [Intro], [Verse 1], [Chorus]
-  // 剔除: [钢琴独奏], [温柔地], [高潮部分], [渐强]
-  assertEqual(result.removedCount, 4, '4个描述词被剔除');
-  assertEqual(result.sanitized.includes('[Intro]'), true, '保留 [Intro]');
-  assertEqual(result.sanitized.includes('[Verse 1]'), true, '保留 [Verse 1]');
-  assertEqual(result.sanitized.includes('[Chorus]'), true, '保留 [Chorus]');
-  assertEqual(result.sanitized.includes('[钢琴独奏]'), false, '剔除 [钢琴独奏]');
-  assertEqual(result.sanitized.includes('[温柔地]'), false, '剔除 [温柔地]');
-  assertEqual(result.sanitized.includes('[高潮部分]'), false, '剔除 [高潮部分]');
-  assertEqual(result.sanitized.includes('[渐强]'), false, '剔除 [渐强]');
-}
-
-console.log('\n=== Test 10: segments 结构验证 ===');
-{
-  const input = '[Verse]\nHello\n[温柔地]';
+  const input = `[Verse]
+Test lyrics`;
   const result = analyzeLyrics(input);
-  assertEqual(result.length, 3, '3个segments');
-  assertEqual(result[0].type, 'structure', '第1个是structure');
-  assertEqual(result[0].content, 'Verse', '第1个content是Verse');
-  assertEqual(result[1].type, 'text', '第2个是text');
-  assertEqual(result[1].content, '\nHello\n', '第2个content是\\nHello\\n');
-  assertEqual(result[2].type, 'description', '第3个是description');
-  assertEqual(result[2].content, '温柔地', '第3个content是温柔地');
-  assertEqual(result[2].raw, '[温柔地]', '第3个raw是[温柔地]');
+  assertEqual(result.cleaned, input, 'analyzeLyrics 返回 cleaned 等于输入');
+  assertEqual(result.structureTagCount, 1, 'analyzeLyrics 识别到 1 个标签');
 }
 
-console.log('\n=== Test 11: V5.4 Hotfix - case3 segments description 计数 ===');
+console.log('\n=== Test 7: 所有标准结构标签 ===');
 {
-  const input = '[温柔地]我爱你[停顿][钢琴独奏]';
-  const segs = analyzeLyrics(input);
-  const descriptions = segs.filter(s => s.type === 'description');
-  assertEqual(descriptions.length, 3, 'case3: segments 中恰好有 3 个 description 类型');
-  assertEqual(descriptions[0].raw, '[温柔地]', 'case3: 第1个description是[温柔地]');
-  assertEqual(descriptions[1].raw, '[停顿]', 'case3: 第2个description是[停顿]');
-  assertEqual(descriptions[2].raw, '[钢琴独奏]', 'case3: 第3个description是[钢琴独奏]');
+  const input = `[Verse]
+[Chorus]
+[Bridge]
+[Intro]
+[Outro]
+[Pre-Chorus]
+[Hook]
+[Interlude]
+[Solo]
+[Break]
+[Refrain]`;
+  const result = sanitizeLyrics(input);
+  assertEqual(result.structureTagCount, 11, '识别到 11 个标准结构标签');
+  assertEqual(result.cleaned, input, '所有标签原样保留');
+}
+
+console.log('\n=== Test 8: null/undefined 输入 ===');
+{
+  const result1 = sanitizeLyrics(null as unknown as string);
+  assertEqual(result1.cleaned, '', 'null 输入返回空字符串');
   
-  const result = sanitizeLyrics(input);
-  assertEqual(result.removedCount, 3, 'case3: removedCount = 3');
-  assertEqual(result.removedSamples, ['[温柔地]', '[停顿]', '[钢琴独奏]'], 'case3: removedSamples 正确');
+  const result2 = sanitizeLyrics(undefined as unknown as string);
+  assertEqual(result2.cleaned, '', 'undefined 输入返回空字符串');
 }
 
-console.log('\n=== Test 12: V5.4 Hotfix - case4 segments 分类计数 ===');
+console.log('\n=== Test 9: totalLines 计算 ===');
 {
-  const input = '[Verse 1]\n[女声轻柔]晚风吹过[Chorus]\n[激情]为你歌唱';
-  const segs = analyzeLyrics(input);
-  const structures = segs.filter(s => s.type === 'structure');
-  const descriptions = segs.filter(s => s.type === 'description');
-  assertEqual(structures.length, 2, 'case4: segments 中恰好有 2 个 structure 类型');
-  assertEqual(descriptions.length, 2, 'case4: segments 中恰好有 2 个 description 类型');
-  
+  const input = `[Verse]
+
+Hello world
+
+[Chorus]
+
+La la la
+`;
   const result = sanitizeLyrics(input);
-  assertEqual(result.removedCount, 2, 'case4: removedCount = 2');
-  assertEqual(result.removedSamples, ['[女声轻柔]', '[激情]'], 'case4: removedSamples 正确');
+  assertEqual(result.totalLines, 4, '非空行数为 4（忽略空行）');
 }
 
-console.log('\n=== Test 13: V5.4 Hotfix - e2e 场景 ===');
-{
-  const input = '[Verse]\n晚风吹过[温柔地]你的发梢\n[Chorus][钢琴独奏]\n[女声哼唱]我想为你唱首歌';
-  const segs = analyzeLyrics(input);
-  const structures = segs.filter(s => s.type === 'structure');
-  const descriptions = segs.filter(s => s.type === 'description');
-  assertEqual(structures.length, 2, 'e2e: segments 中恰好有 2 个 structure 类型');
-  assertEqual(descriptions.length, 3, 'e2e: segments 中恰好有 3 个 description 类型');
-  
-  const result = sanitizeLyrics(input);
-  assertEqual(result.removedCount, 3, 'e2e: removedCount = 3');
-  assertEqual(result.removedSamples, ['[温柔地]', '[钢琴独奏]', '[女声哼唱]'], 'e2e: removedSamples 正确');
+console.log('\n=== Summary ===');
+console.log(`Passed: ${passed}, Failed: ${failed}`);
+if (failed > 0) {
+  process.exit(1);
 }
-
-console.log('\n=== Test 14: V5.4 Hotfix #2 - 纯描述词歌词（乐器模式兜底场景）===');
-{
-  const input = '[钢琴独奏][温柔地]';
-  const result = sanitizeLyrics(input);
-  // 钢琴独奏 不匹配 独奏 别名（别名要求完全匹配），所以被判为 description
-  // 温柔地 也不是结构标签，判为 description
-  assertEqual(result.sanitized.trim(), '', 'sanitized trim 后为空字符串');
-  assertEqual(result.removedCount, 2, 'removedCount = 2');
-  assertEqual(result.removedSamples, ['[钢琴独奏]', '[温柔地]'], 'removedSamples 包含 [钢琴独奏] 和 [温柔地]');
-}
-
-console.log(`\n========================================`);
-console.log(`Total: ${passed + failed} tests`);
-console.log(`Passed: ${passed}`);
-console.log(`Failed: ${failed}`);
-console.log(`========================================\n`);
-
-process.exit(failed > 0 ? 1 : 0);

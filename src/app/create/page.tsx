@@ -12,7 +12,7 @@ import { MusicPlayer } from '@/components/music-player';
 import { DeepThinkingLyrics } from '@/components/deep-thinking-lyrics';
 import { Button } from '@/components/ui/button';
 import { Sparkles, Loader2, AlertTriangle } from 'lucide-react';
-import { analyzeLyrics, type LyricsSegment } from '@/lib/lyrics-sanitizer';
+import { analyzeLyrics, type SanitizeResult } from '@/lib/lyrics-sanitizer';
 import { useToggleSelection } from '@/hooks/useToggleSelection';
 import { useMultiToggleSelection } from '@/hooks/useMultiToggleSelection';
 import { SELECTION_STYLES } from '@/lib/ui-tokens';
@@ -111,11 +111,12 @@ export default function CreatePage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
   const [generatedAudioUrl, setGeneratedAudioUrl] = useState<string>();
-  const [lyricsAnalysis, setLyricsAnalysis] = useState<{
-    segments: LyricsSegment[];
-    structureCount: number;
-    descriptionCount: number;
-  }>({ segments: [], structureCount: 0, descriptionCount: 0 });
+  const [lyricsAnalysis, setLyricsAnalysis] = useState<SanitizeResult>({
+    cleaned: '',
+    bracketTags: [],
+    structureTagCount: 0,
+    totalLines: 0,
+  });
 
   // PuLe-specific state
   const [puleItemIds, setPuleItemIds] = useState<string[]>([]);
@@ -133,12 +134,8 @@ export default function CreatePage() {
 
   // Auto-analyze lyrics when they change
   useEffect(() => {
-    const segments = analyzeLyrics(lyrics);
-    setLyricsAnalysis({
-      segments,
-      structureCount: segments.filter(s => s.type === 'structure').length,
-      descriptionCount: segments.filter(s => s.type === 'description').length,
-    });
+    const result = analyzeLyrics(lyrics);
+    setLyricsAnalysis(result);
   }, [lyrics]);
 
   // PuLe polling logic
@@ -431,11 +428,11 @@ export default function CreatePage() {
       if (data.is_demo) {
         toast.success('演示模式', { description: data.message || '当前为演示模式，配置 API Key 后可生成真实音乐' });
       } else {
-        // 读取歌词净化信息（新字段 lyricsSanitize 优先，兜底老字段 lyrics_analysis）
+        // 读取歌词标签信息
         const sanitizeInfo = data.lyricsSanitize || data.lyrics_analysis;
-        const removedCount = sanitizeInfo?.removedCount ?? 0;
-        const toastDesc = removedCount > 0
-          ? `已自动净化 ${removedCount} 处描述词标签`
+        const bracketTagCount = sanitizeInfo?.structureTagCount ?? sanitizeInfo?.bracketTags?.length ?? 0;
+        const toastDesc = bracketTagCount > 0
+          ? `已识别 ${bracketTagCount} 处方括号标签，原样保留`
           : undefined;
         toast.success('音乐生成成功', { description: toastDesc });
       }
@@ -511,9 +508,9 @@ export default function CreatePage() {
       setGenerationProgress(10);
       
       const sanitizeInfo = data.lyricsSanitize;
-      const removedCount = sanitizeInfo?.removedCount ?? 0;
-      const toastDesc = removedCount > 0
-        ? `已提交 ${data.item_ids.length} 首，净化 ${removedCount} 处描述词`
+      const bracketTagCount = sanitizeInfo?.structureTagCount ?? sanitizeInfo?.bracketTags?.length ?? 0;
+      const toastDesc = bracketTagCount > 0
+        ? `已提交 ${data.item_ids.length} 首，保留 ${bracketTagCount} 处标签`
         : `已提交 ${data.item_ids.length} 首`;
       toast.success('PuLe 任务已提交', { description: toastDesc });
 
@@ -608,9 +605,9 @@ export default function CreatePage() {
       setGenerationProgress(10);
       
       const sanitizeInfo = data.lyricsSanitize;
-      const removedCount = sanitizeInfo?.removedCount ?? 0;
-      const toastDesc = removedCount > 0
-        ? `已提交 ${songs.length} 首，净化 ${removedCount} 处描述词`
+      const bracketTagCount = sanitizeInfo?.structureTagCount ?? sanitizeInfo?.bracketTags?.length ?? 0;
+      const toastDesc = bracketTagCount > 0
+        ? `已提交 ${songs.length} 首，保留 ${bracketTagCount} 处标签`
         : `已提交 ${songs.length} 首`;
       toast.success('Suno 任务已提交', { description: toastDesc });
 
@@ -1003,38 +1000,32 @@ export default function CreatePage() {
               onImportFromAI={handleLyricsFromAI}
             />
             
-            {/* Lyrics Analysis Bar - shows bracket tag warning */}
-            {(lyricsAnalysis.structureCount > 0 || lyricsAnalysis.descriptionCount > 0) && (
+            {/* Lyrics Analysis Bar - shows bracket tag info */}
+            {lyricsAnalysis.structureTagCount > 0 && (
               <div className="glass-card p-3 border-l-2 border-amber-400/60 bg-amber-500/5">
                 <div className="flex items-start gap-2">
                   <AlertTriangle className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-xs text-amber-200/90 leading-relaxed">
-                      ✅ 保留 {lyricsAnalysis.structureCount} 处结构标签
-                      {lyricsAnalysis.descriptionCount > 0 && (
-                        <>  ✂️ 将净化 {lyricsAnalysis.descriptionCount} 处描述词</>
-                      )}
+                      ✅ 识别到 {lyricsAnalysis.structureTagCount} 处方括号标签，将原样保留供 AI 创作参考
                     </p>
-                    {lyricsAnalysis.descriptionCount > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {lyricsAnalysis.segments
-                          .filter(s => s.type === 'description')
-                          .slice(0, 8)
-                          .map((seg, i) => (
-                            <span
-                              key={i}
-                              className="inline-block px-1.5 py-0.5 text-[10px] font-mono bg-red-400/10 text-red-300 rounded line-through"
-                            >
-                              {seg.raw}
-                            </span>
-                          ))}
-                        {lyricsAnalysis.descriptionCount > 8 && (
-                          <span className="inline-block px-1.5 py-0.5 text-[10px] text-amber-400/60">
-                            +{lyricsAnalysis.descriptionCount - 8}
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {lyricsAnalysis.bracketTags
+                        .slice(0, 8)
+                        .map((tag, i) => (
+                          <span
+                            key={i}
+                            className="inline-block px-1.5 py-0.5 text-[10px] font-mono bg-amber-400/10 text-amber-300 rounded"
+                          >
+                            {tag}
                           </span>
-                        )}
-                      </div>
-                    )}
+                        ))}
+                      {lyricsAnalysis.structureTagCount > 8 && (
+                        <span className="inline-block px-1.5 py-0.5 text-[10px] text-amber-400/60">
+                          +{lyricsAnalysis.structureTagCount - 8}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
