@@ -315,3 +315,148 @@ export async function generateMV(params: GenerateMVParams): Promise<AceDataRespo
   
   return acedataFetch<{ task_id?: string }>('/luma/videos', body);
 }
+
+/**
+ * AceData Provider - 实现 MusicProvider 接口
+ * AceData 底层只支持 chirp-v4，前端传的其他版本映射到 chirp-v4
+ */
+import type { MusicProvider, GenerateParams, GenerateResult, ProviderTaskStatus } from './music-provider';
+
+// Suno 版本到 AceData 底层模型的映射
+const ACE_DATA_MODEL_MAP: Record<string, string> = {
+  'v5-5': 'chirp-v4',
+  'v5': 'chirp-v4',
+  'v4-5-plus': 'chirp-v4',
+  'v4-5': 'chirp-v4',
+  'v4': 'chirp-v4',
+};
+
+// 需要显示 warning 的版本（非 v4 的版本）
+const VERSIONS_NEED_WARNING = ['v5-5', 'v5', 'v4-5-plus', 'v4-5'];
+
+export class AceDataProvider implements MusicProvider {
+  name = 'acedata';
+
+  async generate(params: GenerateParams): Promise<GenerateResult> {
+    const { model_version } = params;
+    
+    // 映射到 AceData 底层模型
+    const actualModel = ACE_DATA_MODEL_MAP[model_version] || 'chirp-v4';
+    
+    // 判断是否需要 warning
+    const warning = VERSIONS_NEED_WARNING.includes(model_version)
+      ? 'AceData 当前仅支持 v4，其他版本待接入新 provider 后启用'
+      : undefined;
+
+    // 构建 AceData 请求参数
+    const aceParams: GenerateMusicParams = {
+      prompt: params.prompt,
+      lyric: params.lyric,
+      style: params.style,
+      title: params.title,
+      model: actualModel,
+      custom: params.custom_mode,
+      instrumental: params.instrumental,
+      wait: false, // 异步模式
+    };
+
+    // 映射 vocal_gender
+    if (params.vocal_gender === 'male') {
+      aceParams.vocal_gender = 'm';
+    } else if (params.vocal_gender === 'female') {
+      aceParams.vocal_gender = 'f';
+    }
+
+    if (params.duration) {
+      aceParams.duration = params.duration;
+    }
+
+    // 调用 AceData API
+    const result = await generateMusic(aceParams);
+
+    if (!result.success) {
+      const error = result.error;
+      return {
+        task_id: '',
+        status: 'failed',
+        provider: this.name,
+        model_version,
+        actual_model: actualModel,
+        warning,
+        data: { error: error?.message || '生成失败' },
+      };
+    }
+
+    const taskId = result.task_id || '';
+    const data = result.data as { task_id?: string; data?: MusicResult[] } | undefined;
+
+    // 如果同步返回了结果
+    if (data?.data && data.data.length > 0) {
+      return {
+        task_id: taskId || data.task_id || '',
+        status: 'succeeded',
+        provider: this.name,
+        model_version,
+        actual_model: actualModel,
+        warning,
+        data: data.data,
+      };
+    }
+
+    // 异步模式
+    return {
+      task_id: taskId,
+      status: 'pending',
+      provider: this.name,
+      model_version,
+      actual_model: actualModel,
+      warning,
+      data: { task_id: taskId },
+    };
+  }
+
+  async queryTask(taskId: string): Promise<ProviderTaskStatus> {
+    const result = await getTaskStatus(taskId, 'music');
+
+    if (!result.success) {
+      return {
+        task_id: taskId,
+        status: 'failed',
+        provider: this.name,
+        error: result.error?.message || '查询失败',
+      };
+    }
+
+    const taskData = result.data;
+    const status = taskData?.status;
+
+    // 映射状态
+    let mappedStatus: ProviderTaskStatus['status'] = 'pending';
+    if (status === 'complete') {
+      mappedStatus = 'succeeded';
+    } else if (status === 'failed') {
+      mappedStatus = 'failed';
+    } else if (status === 'processing') {
+      mappedStatus = 'processing';
+    }
+
+    // 提取歌曲数据
+    const songs = taskData?.data
+      ? [{
+          id: taskId,
+          title: 'Generated Song',
+          audio_url: (taskData.data as Record<string, unknown>)?.audio_url as string | undefined,
+          image_url: (taskData.data as Record<string, unknown>)?.image_url as string | undefined,
+          lyric: (taskData.data as Record<string, unknown>)?.lyric as string | undefined,
+          duration: (taskData.data as Record<string, unknown>)?.duration as number | undefined,
+        }]
+      : undefined;
+
+    return {
+      task_id: taskId,
+      status: mappedStatus,
+      provider: this.name,
+      songs,
+    };
+  }
+}

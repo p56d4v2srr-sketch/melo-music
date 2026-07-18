@@ -56,6 +56,8 @@ export const songs = pgTable(
     vocal_type: varchar("vocal_type", { length: 16 }).default("female"),
     mood: varchar("mood", { length: 32 }),
     is_public: boolean("is_public").default(true).notNull(),
+    model_version: varchar("model_version", { length: 16 }).default("v5"),
+    provider: varchar("provider", { length: 32 }).default("acedata"),
     play_count: integer("play_count").default(0).notNull(),
     like_count: integer("like_count").default(0).notNull(),
     collect_count: integer("collect_count").default(0).notNull(),
@@ -74,6 +76,8 @@ export const songs = pgTable(
     index("songs_is_public_idx").on(table.is_public),
     index("songs_language_idx").on(table.language),
     index("songs_mood_idx").on(table.mood),
+    index("songs_model_version_idx").on(table.model_version),
+    index("songs_provider_idx").on(table.provider),
   ]
 );
 

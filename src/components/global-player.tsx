@@ -23,6 +23,8 @@ interface Song {
   coverUrl: string;
   audioUrl: string;
   duration?: number;
+  model_version?: string;
+  provider?: string;
 }
 
 interface PlayerContextType {

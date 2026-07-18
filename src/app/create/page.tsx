@@ -13,8 +13,28 @@ import { DeepThinkingLyrics } from '@/components/deep-thinking-lyrics';
 import { Button } from '@/components/ui/button';
 import { Sparkles, Loader2 } from 'lucide-react';
 
+// 模型系列 tab 定义
+const MODEL_TABS = [
+  { key: 'suno', name: 'Suno', enabled: true },
+  { key: 'mureka', name: 'Mureka', enabled: false },
+  { key: 'minimax', name: 'MiniMax（海螺音乐）', enabled: false },
+  { key: 'acestep', name: 'ACE-Step', enabled: false },
+  { key: 'voice-clone', name: '音色克隆', enabled: false },
+];
+
+// Suno 版本定义
+const SUNO_VERSIONS = [
+  { key: 'v5-5', name: 'Suno V5.5', desc: '最新发布实验模型，人声更细腻，输出音质提升', credits: '5 积分/首', badge: 'NEW' },
+  { key: 'v5', name: 'Suno V5.0', desc: '实验模型，音质细腻，默认推荐', credits: '5 积分/首', badge: '默认' },
+  { key: 'v4-5-plus', name: 'Suno V4.5+', desc: '主力生成模型，最长 8 分钟', credits: '5 积分/首', badge: null },
+  { key: 'v4-5', name: 'Suno V4.5', desc: '支持自然语言描述音乐风格，最长 8 分钟', credits: '5 积分/首', badge: null },
+  { key: 'v4', name: 'Suno V4.0', desc: '超强音乐生成，堪比真人', credits: '5 积分/首', badge: null },
+];
+
 export default function CreatePage() {
   // State
+  const [activeModelTab, setActiveModelTab] = useState('suno');
+  const [selectedModelVersion, setSelectedModelVersion] = useState('v5');
   const [songTitle, setSongTitle] = useState('');
   const [songDuration, setSongDuration] = useState(300); // 默认 5 分钟（300秒）
   const [language, setLanguage] = useState('zh');
@@ -32,6 +52,15 @@ export default function CreatePage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
   const [generatedAudioUrl, setGeneratedAudioUrl] = useState<string>();
+
+  const handleModelTabClick = (tabKey: string) => {
+    const tab = MODEL_TABS.find(t => t.key === tabKey);
+    if (!tab?.enabled) {
+      toast.info('敬请期待', { description: `${tab?.name} 即将上线` });
+      return;
+    }
+    setActiveModelTab(tabKey);
+  };
 
   const handleGenerate = async () => {
     if (selectedStyles.length === 0) {
@@ -77,6 +106,7 @@ export default function CreatePage() {
           description,
           lyrics,
           voiceId: selectedVoice,
+          model_version: selectedModelVersion,
         }),
       });
 
@@ -102,11 +132,16 @@ export default function CreatePage() {
         return;
       }
 
-      // Success
+      // Success - handle demo mode
       if (data.is_demo) {
         toast.success('演示模式', { description: data.message || '当前为演示模式，配置 API Key 后可生成真实音乐' });
       } else {
         toast.success('音乐生成任务已提交');
+      }
+
+      // Show warning if provider returned one (e.g., version downgrade)
+      if (data.warning) {
+        toast.info(data.warning);
       }
       
       setGenerationProgress(100);
@@ -140,7 +175,7 @@ export default function CreatePage() {
       
       <main className="pt-20 pb-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-6">
           <h1 className="text-3xl font-bold text-gradient-gold mb-2">
             AI 音乐创作
           </h1>
@@ -148,6 +183,77 @@ export default function CreatePage() {
             选择风格、描述情绪，让 AI 为你创作独一无二的音乐作品
           </p>
         </div>
+
+        {/* Model Series Tabs */}
+        <div className="mb-6">
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+            {MODEL_TABS.map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => handleModelTabClick(tab.key)}
+                className={`
+                  px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all
+                  ${!tab.enabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+                  ${activeModelTab === tab.key && tab.enabled
+                    ? 'text-amber-400 bg-amber-400/10 border border-amber-400/30 shadow-[0_0_12px_rgba(212,175,55,0.2)]'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+                  }
+                `}
+              >
+                {tab.name}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Suno Version Cards (only show when Suno tab is active) */}
+        {activeModelTab === 'suno' && (
+          <div className="mb-6">
+            <div className="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-hide">
+              {SUNO_VERSIONS.map((version) => (
+                <button
+                  key={version.key}
+                  onClick={() => setSelectedModelVersion(version.key)}
+                  className={`
+                    relative flex-shrink-0 w-48 p-4 rounded-xl transition-all text-left
+                    ${selectedModelVersion === version.key
+                      ? 'border-2 border-amber-400 bg-amber-400/5 shadow-[0_0_20px_rgba(212,175,55,0.15)]'
+                      : 'border border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20'
+                    }
+                  `}
+                >
+                  {/* Badge */}
+                  {version.badge && (
+                    <span className={`
+                      absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-bold
+                      ${version.badge === 'NEW' 
+                        ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-black' 
+                        : 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                      }
+                    `}>
+                      {version.badge}
+                    </span>
+                  )}
+                  
+                  {/* Version Name */}
+                  <h3 className={`text-sm font-bold mb-1 ${selectedModelVersion === version.key ? 'text-amber-400' : 'text-foreground'}`}>
+                    {version.name}
+                  </h3>
+                  
+                  {/* Description */}
+                  <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
+                    {version.desc}
+                  </p>
+                  
+                  {/* Credits */}
+                  <span className="text-[10px] text-muted-foreground/70">
+                    {version.credits}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Three Column Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

@@ -14,6 +14,8 @@ interface Work {
   duration: string;
   audioUrl?: string;
   isFavorite: boolean;
+  model_version?: string;
+  provider?: string;
 }
 
 // Demo data
