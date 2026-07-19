@@ -31,11 +31,11 @@ const PROVIDER_TABS = [
 
 // 模型系列 tab 定义
 const MODEL_TABS = [
-  { key: 'minimax', name: 'MiniMax（海螺音乐）', enabled: true },
-  { key: 'suno', name: 'Suno', enabled: false, badge: '暂不可用' },
-  { key: 'mureka', name: 'Mureka', enabled: false },
-  { key: 'acestep', name: 'ACE-Step', enabled: false },
-  { key: 'voice-clone', name: '音色克隆', enabled: false },
+  { key: 'minimax', name: 'MiniMax（海螺音乐）', enabled: true, badge: '推荐' },
+  { key: 'suno', name: 'Suno', enabled: true, badge: null },
+  { key: 'mureka', name: 'Mureka', enabled: true, badge: null },
+  { key: 'acestep', name: 'ACE-Step', enabled: true, badge: 'NEW' },
+  { key: 'voice-clone', name: '音色克隆', enabled: true, badge: null },
 ];
 
 // Suno 版本定义 - 使用 constants.ts 中的上游探测结果
@@ -1108,7 +1108,7 @@ export default function CreatePage() {
                 className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs bg-gradient-to-r from-amber-400/10 to-purple-500/10 text-amber-400 border border-amber-400/30 hover:border-amber-400/50 transition-all"
               >
                 <Library className="w-3.5 h-3.5" />
-                打开曲风库（135 种）
+                打开曲风库（300 种）
                 {selectedGenreIds.length > 0 && (
                   <span className="ml-1 px-1.5 py-0.5 rounded bg-amber-400/20 text-[10px]">
                     已选 {selectedGenreIds.length}
@@ -1404,6 +1404,8 @@ export default function CreatePage() {
         onClose={() => setGenreDrawerOpen(false)}
         selectedGenreIds={selectedGenreIds}
         onSelectionChange={setSelectedGenreIds}
+        description={description}
+        artistIds={selectedArtistIds}
       />
 
       {/* Artist Library Drawer */}
