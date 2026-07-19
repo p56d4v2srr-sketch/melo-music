@@ -154,7 +154,7 @@ export function ArtistLibraryDrawer({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {filteredArtists.map(a => (
                   <ArtistCard
-                    key={a.id}
+                    key={`${a.id}-${a.category}`}
                     artist={a}
                     selected={selectedArtistIds.includes(a.id)}
                     disabled={!selectedArtistIds.includes(a.id) && selectedArtistIds.length >= maxSelect}
@@ -194,7 +194,7 @@ export function ArtistLibraryDrawer({
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {catArtists.slice(0, 6).map(a => (
                         <ArtistCard
-                          key={a.id}
+                          key={`${a.id}-${a.category}`}
                           artist={a}
                           selected={selectedArtistIds.includes(a.id)}
                           disabled={!selectedArtistIds.includes(a.id) && selectedArtistIds.length >= maxSelect}
