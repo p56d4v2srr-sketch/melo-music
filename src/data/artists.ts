@@ -26,7 +26,7 @@ export interface Artist {
   category: ArtistCategory;
 }
 
-export const ARTISTS: Artist[] = [
+const ALL_ARTISTS: Artist[] = [
   // ===== 华语流行 (120位) =====
   // id 1 = 周杰伦 (硬编码，V5.7 华语周杰伦式曲风联动核心)
   {
@@ -604,6 +604,14 @@ export const ARTISTS: Artist[] = [
   { id: 575, name_zh: '李佳薇', name_en: 'Vivian Lee', gender: 'female', region: 'TW', language: ['zh'], genres: [16, 25, 3], tags: ['高音', '实力', '星光', '情歌'], top_songs: ['煎熬', '出口', '像天堂', '勇敢', '学会'], voice_desc: '高亢实力女声', hot_score: 5, category: '华语流行' },
   { id: 580, name_zh: '周笔畅', name_en: 'Bibi Zhou', gender: 'female', region: 'CN', language: ['zh'], genres: [16, 25, 3], tags: ['中性', '实力', '选秀', '创作'], top_songs: ['笔记', '谁动了我的琴弦', '现在', '对嘴', '翻白眼'], voice_desc: '磁性中性女声', hot_score: 6, category: '华语流行' },
 ];
+
+// ===== 自动去重：按 name_zh 去重，保留第一条 =====
+const _seen = new Set<string>();
+export const ARTISTS: Artist[] = ALL_ARTISTS.filter(a => {
+  if (_seen.has(a.name_zh)) return false;
+  _seen.add(a.name_zh);
+  return true;
+});
 
 // ===== Helpers =====
 
