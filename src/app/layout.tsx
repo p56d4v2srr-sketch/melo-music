@@ -61,6 +61,9 @@ export default function RootLayout({
   return (
     <html lang="zh-CN" className="dark" suppressHydrationWarning>
       <head>
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+        <meta name="format-detection" content="telephone=no, date=no, email=no, address=no" />
         <link rel="apple-touch-icon" href="/icons/icon-180x180.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
