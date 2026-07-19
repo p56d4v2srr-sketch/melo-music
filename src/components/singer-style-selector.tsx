@@ -89,7 +89,7 @@ export function SingerStyleSelector({ selectedSingers, onSelectionChange }: Sing
       <div className="space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar">
         {filteredSingers.map((singer) => (
           <SingerCard
-            key={singer.id}
+            key={`${singer.region}-${singer.id}`}
             singer={singer}
             isSelected={selectedSingers.includes(singer.id)}
             onToggle={() => toggleSinger(singer.id)}
