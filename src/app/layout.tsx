@@ -59,14 +59,14 @@ export default function RootLayout({
   const isDev = process.env.COZE_PROJECT_ENV === 'DEV';
 
   return (
-    <html lang="zh-CN" className="dark">
+    <html lang="zh-CN" className="dark" suppressHydrationWarning>
       <head>
         <link rel="apple-touch-icon" href="/icons/icon-180x180.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="theme-color" content="#0a0a0f" />
       </head>
-      <body className={`antialiased`}>
+      <body className={`antialiased`} suppressHydrationWarning>
         {isDev && <Inspector />}
         <SupabaseConfigProvider>
           <AuthProvider>
