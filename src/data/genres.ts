@@ -178,11 +178,103 @@ export const GENRES: Genre[] = [
   { id: 133, category: '🏯 国风流行', categoryEn: 'Guofeng-Pop', nameZh: '华语暗黑哥特', nameEn: 'Dark Gothic (C-Pop Style)', emoji: '⛪', oneLiner: '教堂钟声+管风琴+圣咏和声+华语流行旋律+古典哥特意境+中式叙事', representative: '周杰伦《以父之名》《夜的第七章》《威廉古堡》《爷爷泡的茶》', movement: ['华语暗黑', '周杰伦式'], hotness: 88 },
   { id: 134, category: '🎧 嘻哈/说唱', categoryEn: 'HipHop-Rap', nameZh: '华语旋律说唱', nameEn: 'Melodic Rap (C-Pop Style)', emoji: '🎙️', oneLiner: 'Rap 段落+副歌 melody line+中文韵律+情感叙事+华语流行框架', representative: '周杰伦《听妈妈的话》《止战之殇》《退后》《稻香》《爸我回来了》', movement: ['华语说唱', '周杰伦式'], hotness: 92 },
   { id: 135, category: '🎧 嘻哈/说唱', categoryEn: 'HipHop-Rap', nameZh: '华语流行说唱', nameEn: 'Pop Rap (C-Pop / Chou-Style)', emoji: '🥋', oneLiner: '主歌 Rap+副歌 pop hook+中国风元素+双截棍式节拍', representative: '周杰伦《双截棍》《本草纲目》《牛仔很忙》《忍者》《龙拳》', movement: ['华语说唱', '周杰伦式', '中国风'], hotness: 90 },
+
+  // ===== V5.9 扩充：新增曲风 (136-210) =====
+  // 🎸 摇滚扩充 136-145
+  { id: 136, category: '🎸 摇滚', categoryEn: 'Rock', nameZh: '车库摇滚', nameEn: 'Garage Rock', emoji: '🎸', oneLiner: '粗糙原始、Lo-fi、朋克前身', representative: 'The Stooges, MC5', hotness: 65 },
+  { id: 137, category: '🎸 摇滚', categoryEn: 'Rock', nameZh: '迷幻摇滚', nameEn: 'Psychedelic Rock', emoji: '🌈', oneLiner: '致幻、即兴、东方元素', representative: 'Pink Floyd, Jefferson Airplane', hotness: 72 },
+  { id: 138, category: '🎸 摇滚', categoryEn: 'Rock', nameZh: '前卫金属', nameEn: 'Progressive Metal', emoji: '🎸', oneLiner: '技术精湛、复杂编曲、长篇', representative: 'Dream Theater, Tool', hotness: 70 },
+  { id: 139, category: '🎸 摇滚', categoryEn: 'Rock', nameZh: '工业摇滚', nameEn: 'Industrial Rock', emoji: '⚙️', oneLiner: '机械、冰冷、电子噪音', representative: 'Nine Inch Nails, Rammstein', hotness: 68 },
+  { id: 140, category: '🎸 摇滚', categoryEn: 'Rock', nameZh: '哥特摇滚', nameEn: 'Gothic Rock', emoji: '🦇', oneLiner: '阴暗、浪漫、戏剧化', representative: 'The Cure, Bauhaus', hotness: 65 },
+  { id: 141, category: '🎸 摇滚', categoryEn: 'Rock', nameZh: 'Emo', nameEn: 'Emo', emoji: '💔', oneLiner: '情绪化、内省、青春焦虑', representative: 'My Chemical Romance, Fall Out Boy', hotness: 70 },
+  { id: 142, category: '🎸 摇滚', categoryEn: 'Rock', nameZh: '后硬核', nameEn: 'Post-Hardcore', emoji: '🎸', oneLiner: '激烈与旋律并存、情感爆发', representative: 'Fugazi, At the Drive-In', hotness: 62 },
+  { id: 143, category: '🎸 摇滚', categoryEn: 'Rock', nameZh: '噪音摇滚', nameEn: 'Noise Rock', emoji: '📢', oneLiner: '失真、混沌、反旋律', representative: 'Sonic Youth, Shellac', hotness: 55 },
+  { id: 144, category: '🎸 摇滚', categoryEn: 'Rock', nameZh: '冲浪摇滚', nameEn: 'Surf Rock', emoji: '🏄', oneLiner: '混响吉他、阳光海滩', representative: 'The Beach Boys, Dick Dale', hotness: 60 },
+  { id: 145, category: '🎸 摇滚', categoryEn: 'Rock', nameZh: '摇滚复兴', nameEn: 'Rock Revival', emoji: '🎸', oneLiner: '2020s吉他回归、新锐摇滚', representative: 'Wet Leg, Måneskin', hotness: 75 },
+
+  // 🎤 流行扩充 146-155
+  { id: 146, category: '🎤 流行', categoryEn: 'Pop', nameZh: '艺术流行', nameEn: 'Art Pop', emoji: '🎨', oneLiner: '实验性、前卫、视觉艺术', representative: 'Björk, FKA twigs', hotness: 72 },
+  { id: 147, category: '🎤 流行', categoryEn: 'Pop', nameZh: '梦幻流行', nameEn: 'Dream Pop', emoji: '💭', oneLiner: '朦胧、飘渺、氛围感', representative: 'Beach House, Cigarettes After Sex', hotness: 78 },
+  { id: 148, category: '🎤 流行', categoryEn: 'Pop', nameZh: '电子流行', nameEn: 'Electropop', emoji: '🎹', oneLiner: '合成器主导、电子节拍', representative: 'Lady Gaga, Charli XCX', hotness: 82 },
+  { id: 149, category: '🎤 流行', categoryEn: 'Pop', nameZh: '拉丁流行', nameEn: 'Latin Pop', emoji: '💃', oneLiner: '热情、节奏感、西班牙语', representative: 'Ricky Martin, Shakira', hotness: 85 },
+  { id: 150, category: '🎤 流行', categoryEn: 'Pop', nameZh: '青少年流行', nameEn: 'Teen Pop', emoji: '🌟', oneLiner: '青春、偶像、活力', representative: 'Britney Spears, NSYNC', hotness: 70 },
+  { id: 151, category: '🎤 流行', categoryEn: 'Pop', nameZh: '成人当代', nameEn: 'Adult Contemporary', emoji: '🎵', oneLiner: '成熟、温暖、电台友好', representative: 'Adele, John Mayer', hotness: 75 },
+  { id: 152, category: '🎤 流行', categoryEn: 'Pop', nameZh: '城市流行', nameEn: 'City Pop', emoji: '🌃', oneLiner: '80s日本都市、复古时尚', representative: '山下达郎, 竹内まりや', hotness: 80 },
+  { id: 153, category: '🎤 流行', categoryEn: 'Pop', nameZh: '蒸汽波', nameEn: 'Vaporwave', emoji: '🌴', oneLiner: '怀旧、采样、网络美学', representative: 'Macintosh Plus, Saint Pepsi', hotness: 65 },
+  { id: 154, category: '🎤 流行', categoryEn: 'Pop', nameZh: '未来贝斯', nameEn: 'Future Bass', emoji: '🔮', oneLiner: '明亮和弦、cut vocal、跳跃', representative: 'Flume, San Holo', hotness: 72 },
+  { id: 155, category: '🎤 流行', categoryEn: 'Pop', nameZh: ' hyperpop', nameEn: 'Hyperpop', emoji: '💥', oneLiner: '极端、失真、互联网文化', representative: 'SOPHIE, 100 gecs', hotness: 75 },
+
+  // 🎧 嘻哈/说唱扩充 156-165
+  { id: 156, category: '🎧 嘻哈/说唱', categoryEn: 'HipHop-Rap', nameZh: '陷阱音乐', nameEn: 'Trap', emoji: '🔥', oneLiner: '808鼓机、hi-hat、暗黑', representative: 'Future, Migos', hotness: 90 },
+  { id: 157, category: '🎧 嘻哈/说唱', categoryEn: 'HipHop-Rap', nameZh: '爵士说唱', nameEn: 'Jazz Rap', emoji: '🎷', oneLiner: '爵士采样、慵懒、知性', representative: 'A Tribe Called Quest, De La Soul', hotness: 75 },
+  { id: 158, category: '🎧 嘻哈/说唱', categoryEn: 'HipHop-Rap', nameZh: '匪帮说唱', nameEn: 'Gangsta Rap', emoji: '🔫', oneLiner: '街头、写实、硬核', representative: 'N.W.A, Tupac', hotness: 80 },
+  { id: 159, category: '🎧 嘻哈/说唱', categoryEn: 'HipHop-Rap', nameZh: '意识说唱', nameEn: 'Conscious Rap', emoji: '🧠', oneLiner: '社会议题、思想性、深度', representative: 'Kendrick Lamar, J. Cole', hotness: 85 },
+  { id: 160, category: '🎧 嘻哈/说唱', categoryEn: 'HipHop-Rap', nameZh: 'Drill', nameEn: 'Drill', emoji: '🗽', oneLiner: '暗黑、sliding 808、芝加哥/伦敦', representative: 'Chief Keef, Central Cee', hotness: 82 },
+  { id: 161, category: '🎧 嘻哈/说唱', categoryEn: 'HipHop-Rap', nameZh: 'Boom Bap', nameEn: 'Boom Bap', emoji: '🎤', oneLiner: '经典鼓点、采样、90s东海岸', representative: 'Nas, Wu-Tang Clan', hotness: 78 },
+  { id: 162, category: '🎧 嘻哈/说唱', categoryEn: 'HipHop-Rap', nameZh: 'Emo Rap', nameEn: 'Emo Rap', emoji: '😢', oneLiner: '情绪化、旋律、Lo-fi', representative: 'Lil Peep, Juice WRLD', hotness: 75 },
+  { id: 163, category: '🎧 嘻哈/说唱', categoryEn: 'HipHop-Rap', nameZh: 'Lo-fi HipHop', nameEn: 'Lo-fi HipHop', emoji: '📻', oneLiner: '放松、学习伴侣、循环', representative: 'Nujabes, J Dilla', hotness: 88 },
+  { id: 164, category: '🎧 嘻哈/说唱', categoryEn: 'HipHop-Rap', nameZh: 'Grime', nameEn: 'Grime', emoji: '🇬🇧', oneLiner: '英国、140BPM、街头', representative: 'Skepta, Stormzy', hotness: 70 },
+  { id: 165, category: '🎧 嘻哈/说唱', categoryEn: 'HipHop-Rap', nameZh: 'Afrobeats', nameEn: 'Afrobeats', emoji: '🌍', oneLiner: '非洲节拍、融合、全球热曲', representative: 'Burna Boy, Wizkid', hotness: 88 },
+
+  // 🎹 电子/舞曲扩充 166-180
+  { id: 166, category: '🎹 电子', categoryEn: 'Electronic', nameZh: 'Techno', nameEn: 'Techno', emoji: '🎹', oneLiner: '4/4拍、机械、底特律/柏林', representative: 'Jeff Mills, Richie Hawtin', hotness: 75 },
+  { id: 167, category: '🎹 电子', categoryEn: 'Electronic', nameZh: 'House', nameEn: 'House', emoji: '🏠', oneLiner: '4/4拍、灵魂、芝加哥', representative: 'Frankie Knuckles, Daft Punk', hotness: 85 },
+  { id: 168, category: '🎹 电子', categoryEn: 'Electronic', nameZh: 'Deep House', nameEn: 'Deep House', emoji: '🌊', oneLiner: '深沉、温暖、律动', representative: 'Kerri Chandler, Maya Jane Coles', hotness: 78 },
+  { id: 169, category: '🎹 电子', categoryEn: 'Electronic', nameZh: 'Trance', nameEn: 'Trance', emoji: '🌀', oneLiner: '渐进、催眠、情感高潮', representative: 'Armin van Buuren, Above & Beyond', hotness: 72 },
+  { id: 170, category: '🎹 电子', categoryEn: 'Electronic', nameZh: 'Dubstep', nameEn: 'Dubstep', emoji: '💥', oneLiner: 'wobble bass、140BPM、重型', representative: 'Skrillex, Burial', hotness: 75 },
+  { id: 171, category: '🎹 电子', categoryEn: 'Electronic', nameZh: 'Drum & Bass', nameEn: 'Drum & Bass', emoji: '🥁', oneLiner: '碎拍、174BPM、低音', representative: 'Goldie, LTJ Bukem', hotness: 70 },
+  { id: 172, category: '🎹 电子', categoryEn: 'Electronic', nameZh: 'Ambient', nameEn: 'Ambient', emoji: '🌌', oneLiner: '氛围、无节拍、沉浸', representative: 'Brian Eno, Aphex Twin', hotness: 68 },
+  { id: 173, category: '🎹 电子', categoryEn: 'Electronic', nameZh: 'IDM', nameEn: 'IDM', emoji: '🤖', oneLiner: '智能舞曲、实验、复杂', representative: 'Aphex Twin, Boards of Canada', hotness: 65 },
+  { id: 174, category: '🎹 电子', categoryEn: 'Electronic', nameZh: 'Synthwave', nameEn: 'Synthwave', emoji: '🌆', oneLiner: '80s复古、霓虹、怀旧', representative: 'Perturbator, Carpenter Brut', hotness: 78 },
+  { id: 175, category: '🎹 电子', categoryEn: 'Electronic', nameZh: 'Retrowave', nameEn: 'Retrowave', emoji: '📼', oneLiner: '复古未来、合成器、夜景', representative: 'The Midnight, FM-84', hotness: 75 },
+  { id: 176, category: '🎹 电子', categoryEn: 'Electronic', nameZh: 'Downtempo', nameEn: 'Downtempo', emoji: '🛋️', oneLiner: '慢节奏、放松、氛围', representative: 'Massive Attack, Thievery Corporation', hotness: 70 },
+  { id: 177, category: '🎹 电子', categoryEn: 'Electronic', nameZh: 'UK Garage', nameEn: 'UK Garage', emoji: '🇬🇧', oneLiner: '切分节拍、灵魂、伦敦', representative: 'Craig David, Artful Dodger', hotness: 68 },
+  { id: 178, category: '🎹 电子', categoryEn: 'Electronic', nameZh: 'Hardstyle', nameEn: 'Hardstyle', emoji: '💪', oneLiner: '硬派、失真kick、高能', representative: 'Headhunterz, Brennan Heart', hotness: 72 },
+  { id: 179, category: '🎹 电子', categoryEn: 'Electronic', nameZh: 'Phonk', nameEn: 'Phonk', emoji: '🚗', oneLiner: '漂移、Memphis采样、TikTok', representative: 'Kordhell, DVRST', hotness: 85 },
+  { id: 180, category: '🎹 电子', categoryEn: 'Electronic', nameZh: 'Jersey Club', nameEn: 'Jersey Club', emoji: '💃', oneLiner: '弹性kick、切分、舞池', representative: 'DJ Sliink, UNIIQU3', hotness: 75 },
+
+  // 🎷 爵士/布鲁斯扩充 181-188
+  { id: 181, category: '🎷 爵士/布鲁斯', categoryEn: 'Jazz/Blues', nameZh: '摇摆乐', nameEn: 'Swing', emoji: '🎷', oneLiner: '大乐队、舞蹈、30-40s', representative: 'Frank Sinatra, Ella Fitzgerald', hotness: 70 },
+  { id: 182, category: '🎷 爵士/布鲁斯', categoryEn: 'Jazz/Blues', nameZh: 'Bebop', nameEn: 'Bebop', emoji: '🎺', oneLiner: '快速、即兴、复杂和声', representative: 'Charlie Parker, Dizzy Gillespie', hotness: 68 },
+  { id: 183, category: '🎷 爵士/布鲁斯', categoryEn: 'Jazz/Blues', nameZh: '冷爵士', nameEn: 'Cool Jazz', emoji: '❄️', oneLiner: '克制、放松、西海岸', representative: 'Miles Davis, Chet Baker', hotness: 72 },
+  { id: 184, category: '🎷 爵士/布鲁斯', categoryEn: 'Jazz/Blues', nameZh: '自由爵士', nameEn: 'Free Jazz', emoji: '🆓', oneLiner: '无规则、先锋、解放', representative: 'Ornette Coleman, John Coltrane', hotness: 60 },
+  { id: 185, category: '🎷 爵士/布鲁斯', categoryEn: 'Jazz/Blues', nameZh: '融合爵士', nameEn: 'Jazz Fusion', emoji: '🔀', oneLiner: '爵士+摇滚+放克', representative: 'Weather Report, Herbie Hancock', hotness: 70 },
+  { id: 186, category: '🎷 爵士/布鲁斯', categoryEn: 'Jazz/Blues', nameZh: '酸性爵士', nameEn: 'Acid Jazz', emoji: '🧪', oneLiner: '爵士+放克+嘻哈', representative: 'Jamiroquai, Brand New Heavies', hotness: 68 },
+  { id: 187, category: '🎷 爵士/布鲁斯', categoryEn: 'Jazz/Blues', nameZh: '三角洲布鲁斯', nameEn: 'Delta Blues', emoji: '🎸', oneLiner: '密西西比、原声、滑棒', representative: 'Robert Johnson, Son House', hotness: 65 },
+  { id: 188, category: '🎷 爵士/布鲁斯', categoryEn: 'Jazz/Blues', nameZh: '芝加哥布鲁斯', nameEn: 'Chicago Blues', emoji: '🎸', oneLiner: '电吉他、乐队、城市化', representative: 'Muddy Waters, B.B. King', hotness: 68 },
+
+  // 🎼 古典/管弦扩充 189-195
+  { id: 189, category: '🎼 古典/管弦', categoryEn: 'Classical/Orchestral', nameZh: '巴洛克', nameEn: 'Baroque', emoji: '🎼', oneLiner: '华丽、对位、羽管键琴', representative: 'Bach, Vivaldi, Handel', hotness: 70 },
+  { id: 190, category: '🎼 古典/管弦', categoryEn: 'Classical/Orchestral', nameZh: '浪漫主义', nameEn: 'Romantic', emoji: '🎹', oneLiner: '情感、宏大、钢琴', representative: 'Chopin, Liszt, Tchaikovsky', hotness: 75 },
+  { id: 191, category: '🎼 古典/管弦', categoryEn: 'Classical/Orchestral', nameZh: '印象主义', nameEn: 'Impressionist', emoji: '🌅', oneLiner: '色彩、氛围、模糊', representative: 'Debussy, Ravel', hotness: 68 },
+  { id: 192, category: '🎼 古典/管弦', categoryEn: 'Classical/Orchestral', nameZh: '极简主义', nameEn: 'Minimalist', emoji: '⚪', oneLiner: '重复、渐进、冥想', representative: 'Philip Glass, Steve Reich', hotness: 65 },
+  { id: 193, category: '🎼 古典/管弦', categoryEn: 'Classical/Orchestral', nameZh: '电影配乐', nameEn: 'Film Score', emoji: '🎬', oneLiner: '史诗、情感、画面感', representative: 'Hans Zimmer, John Williams', hotness: 88 },
+  { id: 194, category: '🎼 古典/管弦', categoryEn: 'Classical/Orchestral', nameZh: '游戏配乐', nameEn: 'Game Score', emoji: '🎮', oneLiner: '奇幻、冒险、沉浸', representative: 'Nobuo Uematsu, Jeremy Soule', hotness: 82 },
+  { id: 195, category: '🎼 古典/管弦', categoryEn: 'Classical/Orchestral', nameZh: '新世纪', nameEn: 'New Age', emoji: '🕊️', oneLiner: '冥想、自然、治愈', representative: 'Enya, Yanni', hotness: 70 },
+
+  // 🌍 世界音乐扩充 196-205
+  { id: 196, category: '🌍 世界音乐', categoryEn: 'World Music', nameZh: '雷鬼', nameEn: 'Reggae', emoji: '🇯🇲', oneLiner: '牙买加、反拍、拉斯塔', representative: 'Bob Marley, Peter Tosh', hotness: 78 },
+  { id: 197, category: '🌍 世界音乐', categoryEn: 'World Music', nameZh: '斯卡', nameEn: 'Ska', emoji: '🎺', oneLiner: '欢快、管乐、跳跃', representative: 'The Specials, Madness', hotness: 65 },
+  { id: 198, category: '🌍 世界音乐', categoryEn: 'World Music', nameZh: '桑巴', nameEn: 'Samba', emoji: '🇧🇷', oneLiner: '巴西、狂欢、打击乐', representative: 'Cartola, Bethânia', hotness: 72 },
+  { id: 199, category: '🌍 世界音乐', categoryEn: 'World Music', nameZh: '波萨诺瓦', nameEn: 'Bossa Nova', emoji: '🏖️', oneLiner: '巴西、慵懒、爵士融合', representative: 'João Gilberto, Stan Getz', hotness: 75 },
+  { id: 200, category: '🌍 世界音乐', categoryEn: 'World Music', nameZh: '弗拉门戈', nameEn: 'Flamenco', emoji: '💃', oneLiner: '西班牙、吉他、激情', representative: 'Paco de Lucía, Rosalía', hotness: 78 },
+  { id: 201, category: '🌍 世界音乐', categoryEn: 'World Music', nameZh: '凯尔特', nameEn: 'Celtic', emoji: '🍀', oneLiner: '爱尔兰、风笛、民间', representative: 'Enya, The Chieftains', hotness: 68 },
+  { id: 202, category: '🌍 世界音乐', categoryEn: 'World Music', nameZh: '中东音乐', nameEn: 'Middle Eastern', emoji: '🕌', oneLiner: '乌德琴、微分音、神秘', representative: 'Oum Kalthum, Fairuz', hotness: 65 },
+  { id: 203, category: '🌍 世界音乐', categoryEn: 'World Music', nameZh: '印度古典', nameEn: 'Indian Classical', emoji: '🇮🇳', oneLiner: '拉格、西塔尔、冥想', representative: 'Ravi Shankar, Ali Akbar Khan', hotness: 62 },
+  { id: 204, category: '🌍 世界音乐', categoryEn: 'World Music', nameZh: 'Amapiano', nameEn: 'Amapiano', emoji: '🇿🇦', oneLiner: '南非、深house、钢琴', representative: 'Kabza De Small, DJ Maphorisa', hotness: 85 },
+  { id: 205, category: '🌍 世界音乐', categoryEn: 'World Music', nameZh: 'Kizomba', nameEn: 'Kizomba', emoji: '🇦🇴', oneLiner: '安哥拉、浪漫、慢节奏', representative: 'C4 Pedro, Anselmo Ralph', hotness: 65 },
+
+  // 🎤 人声/合唱扩充 206-210
+  { id: 206, category: '🎤 人声/合唱', categoryEn: 'Vocal/Choir', nameZh: '无伴奏合唱', nameEn: 'A cappella', emoji: '🎵', oneLiner: '纯人声、和声、无伴奏', representative: 'Pentatonix, Take 6', hotness: 72 },
+  { id: 207, category: '🎤 人声/合唱', categoryEn: 'Vocal/Choir', nameZh: '福音', nameEn: 'Gospel', emoji: '⛪', oneLiner: '宗教、灵魂、合唱', representative: 'Kirk Franklin, Aretha Franklin', hotness: 70 },
+  { id: 208, category: '🎤 人声/合唱', categoryEn: 'Vocal/Choir', nameZh: '灵魂乐', nameEn: 'Soul', emoji: '💫', oneLiner: '情感、放克、非裔', representative: 'Marvin Gaye, Stevie Wonder', hotness: 80 },
+  { id: 209, category: '🎤 人声/合唱', categoryEn: 'Vocal/Choir', nameZh: '节奏布鲁斯', nameEn: 'R&B', emoji: '🎶', oneLiner: '流畅、情感、现代', representative: 'Beyoncé, The Weeknd', hotness: 88 },
+  { id: 210, category: '🎤 人声/合唱', categoryEn: 'Vocal/Choir', nameZh: '民谣摇滚', nameEn: 'Folk Rock', emoji: '🎸', oneLiner: '民谣+摇滚、诗意、60s', representative: 'Bob Dylan, Simon & Garfunkel', hotness: 75 },
 ];
 
 // 校验数量
-if (GENRES.length !== 135) {
-  throw new Error(`GENRES 应有 135 条，实际 ${GENRES.length} 条`);
+if (GENRES.length !== 210) {
+  throw new Error(`GENRES 应有 210 条，实际 ${GENRES.length} 条`);
 }
 
 // 按大类分组索引
