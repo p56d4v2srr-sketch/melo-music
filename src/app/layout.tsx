@@ -60,7 +60,7 @@ export default function RootLayout({
 
   return (
     <html lang="zh-CN" className="dark" suppressHydrationWarning>
-      <head>
+      <head suppressHydrationWarning>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
         <meta name="format-detection" content="telephone=no, date=no, email=no, address=no" />
