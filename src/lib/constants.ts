@@ -47,6 +47,23 @@ export const SUNO_VERSIONS = [
 export const DEFAULT_SUNO_VERSION = 'chirp-v5' as const;
 
 /**
+ * 智创聚合 (LCONAI / lconai.com) Suno 版本枚举
+ * V5.8+: 新增第5 provider，支持 Suno V3.5/V4/V4.5/V5 全系列
+ * API Base: https://s.lconai.com（香港线路）/ https://n.lconai.com（备用）
+ * 鉴权: Bearer token
+ * 环境变量: LCONAI_API_KEY
+ */
+export const LCONAI_VERSIONS = [
+  { value: 'chirp-v3-5', label: 'Suno v3.5', desc: '经典款，快速稳定' },
+  { value: 'chirp-v4', label: 'Suno v4', desc: '编曲更饱满' },
+  { value: 'chirp-v4-5', label: 'Suno v4.5', desc: '中英双语加强' },
+  { value: 'chirp-v5', label: 'Suno v5', desc: '综合最佳' },
+  { value: 'chirp-v5-5', label: 'Suno v5.5', desc: '最新版·风格更狂野' },
+] as const;
+
+export const DEFAULT_LCONAI_VERSION = 'chirp-v5' as const;
+
+/**
  * @deprecated 使用 DEFAULT_SUNO_VERSION 代替
  */
 export const SUNO_MODEL_V55 = 'chirp-v5.5' as const;
@@ -63,12 +80,14 @@ export const PROVIDER_MINIMAX = 'minimax' as const;
 export const PROVIDER_PULE = 'pule' as const;
 export const PROVIDER_SUNO = 'suno' as const;
 export const PROVIDER_MUREKA = 'mureka' as const;
+export const PROVIDER_LCONAI = 'lconai' as const;
 
 export type ProviderKey =
   | typeof PROVIDER_MINIMAX
   | typeof PROVIDER_PULE
   | typeof PROVIDER_SUNO
-  | typeof PROVIDER_MUREKA;
+  | typeof PROVIDER_MUREKA
+  | typeof PROVIDER_LCONAI;
 
 /**
  * 所有模型名的枚举（供 UI 显示、type-safe check）

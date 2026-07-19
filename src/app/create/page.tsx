@@ -26,6 +26,7 @@ const PROVIDER_TABS = [
   { key: 'minimax', name: 'MiniMax · 快', subtitle: '~2min · 免费 · music-2.5', enabled: true },
   { key: 'pule', name: 'PuLe · 精品', subtitle: '~90s · ¥0.3/首 · 5min · 时间戳歌词', enabled: true },
   { key: 'suno', name: 'Suno · 全球 v5.5', subtitle: '~60-90s · 2 首供选 · 流式播放 · 内核覆盖中外全曲风元素', enabled: true },
+  { key: 'lconai', name: '智创聚合', subtitle: 'Suno V3.5/V4/V5 · 独立通道', enabled: true },
 ];
 
 // 模型系列 tab 定义
@@ -38,7 +39,7 @@ const MODEL_TABS = [
 ];
 
 // Suno 版本定义 - 使用 constants.ts 中的上游探测结果
-import { SUNO_VERSIONS as SUNO_VERSION_DATA, DEFAULT_SUNO_VERSION, MAX_TIMBRE_CHIP_SELECTED, PULE_MODEL } from '@/lib/constants';
+import { SUNO_VERSIONS as SUNO_VERSION_DATA, DEFAULT_SUNO_VERSION, MAX_TIMBRE_CHIP_SELECTED, PULE_MODEL, LCONAI_VERSIONS as LCONAI_VERSION_DATA, DEFAULT_LCONAI_VERSION } from '@/lib/constants';
 import { VOCAL_TIMBRES } from '@/data/vocal-timbres';
 
 const SUNO_VERSIONS = SUNO_VERSION_DATA.map(v => ({
@@ -49,6 +50,15 @@ const SUNO_VERSIONS = SUNO_VERSION_DATA.map(v => ({
   badge: v.value === DEFAULT_SUNO_VERSION ? '默认' : null,
 }));
 
+// LCONAI (智创聚合) 版本定义
+const LCONAI_VERSIONS = LCONAI_VERSION_DATA.map(v => ({
+  key: v.value,
+  name: v.label,
+  desc: v.desc,
+  credits: '按量计费',
+  badge: v.value === DEFAULT_LCONAI_VERSION ? '默认' : null,
+}));
+
 // MiniMax 版本定义
 const MINIMAX_VERSIONS = [
   { key: 'music-2.0', name: 'MiniMax music-2.0', desc: '经典款 · ~18s · 同步WAV无损', credits: '免费', badge: null },
@@ -57,7 +67,7 @@ const MINIMAX_VERSIONS = [
 
 export default function CreatePage() {
   // ========== Provider state (useToggleSelection) ==========
-  const provider = useToggleSelection<'minimax' | 'pule' | 'suno'>();
+  const provider = useToggleSelection<'minimax' | 'pule' | 'suno' | 'lconai'>();
   
   // ========== MiniMax sub-model (useToggleSelection, 必选组) ==========
   const miniMaxModel = useToggleSelection<'music-2.0' | 'music-2.5'>('music-2.5');
@@ -67,6 +77,9 @@ export default function CreatePage() {
   
   // ========== Suno version (useToggleSelection, 必选组) ==========
   const sunoVersion = useToggleSelection<string>(DEFAULT_SUNO_VERSION);
+  
+  // ========== LCONAI version (useToggleSelection, 必选组) ==========
+  const lconaiVersion = useToggleSelection<string>(DEFAULT_LCONAI_VERSION);
   
   // ========== Suno vocal gender (useToggleSelection, 可选组) ==========
   const gender = useToggleSelection<'male' | 'female' | 'duet' | 'instrumental'>();
@@ -375,6 +388,11 @@ export default function CreatePage() {
       return handleGenerateSuno();
     }
 
+    // Route to LCONAI (智创聚合) if selected
+    if (provider.value === 'lconai') {
+      return handleGenerateLconai();
+    }
+
     // MiniMax flow (existing logic)
     setIsGenerating(true);
     setGenerationProgress(0);
@@ -633,6 +651,93 @@ export default function CreatePage() {
     }
   };
 
+  // LCONAI (智创聚合) generate handler
+  const handleGenerateLconai = async () => {
+    setIsGenerating(true);
+    setGenerationProgress(0);
+    setGeneratedAudioUrl(undefined);
+
+    try {
+      const isCustomMode = sunoMode === 'custom';
+      
+      // Build request body
+      const body: Record<string, unknown> = {
+        mode: sunoMode,
+        mv: lconaiVersion.value || DEFAULT_LCONAI_VERSION,
+        instrumental: gender.value === 'instrumental' || vocalType === 'instrumental',
+      };
+
+      if (isCustomMode) {
+        // Custom mode: title + tags + lyrics
+        body.title = songTitle || 'Untitled Melo';
+        const tagParts: string[] = [];
+        if (selectedStyles.length > 0) tagParts.push(selectedStyles.join(', '));
+        else tagParts.push('pop, chinese');
+        if (gender.value === 'duet') tagParts.push('male & female duet');
+        body.tags = tagParts.join(', ');
+        body.lyrics = lyrics || undefined;
+      } else {
+        // Prompt mode
+        const promptParts: string[] = [];
+        if (description) promptParts.push(description);
+        if (selectedStyles.length > 0) promptParts.push(`风格：${selectedStyles.join(', ')}`);
+        if (gender.value === 'male' || vocalType === 'male') promptParts.push('男声');
+        else if (gender.value === 'female' || vocalType === 'female') promptParts.push('女声');
+        else if (gender.value === 'duet') promptParts.push('男女对唱');
+        if (mood) promptParts.push(`情绪：${mood}`);
+        body.prompt = promptParts.filter(Boolean).join('，') || '温暖治愈的中文流行';
+      }
+
+      const response = await fetch('/api/lconai-generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      const data = await response.json();
+
+      if (!data.ok) {
+        const code = data.code || 'UNKNOWN';
+        const message = data.message || data.error || '生成失败';
+        
+        if (code === 'QUOTA_EXCEEDED') {
+          toast.error('智创聚合余额不足', { description: '请联系管理员充值' });
+        } else if (code === 'INVALID_KEY') {
+          toast.error('智创聚合认证失败', { description: 'API Key 无效' });
+        } else if (code === 'EMPTY_LYRICS') {
+          toast.error('歌词为空', { description: '非纯音乐模式必须提供歌词' });
+        } else {
+          toast.error('智创聚合生成失败', { description: message });
+        }
+        setIsGenerating(false);
+        return;
+      }
+
+      // Success
+      const songs = data.songs || [];
+      const sanitizeInfo = data.lyricsSanitize;
+      const bracketTagCount = sanitizeInfo?.structureTagCount ?? sanitizeInfo?.bracketTags?.length ?? 0;
+      const toastDesc = bracketTagCount > 0
+        ? `已生成 ${songs.length} 首，保留 ${bracketTagCount} 处标签`
+        : `已生成 ${songs.length} 首`;
+      toast.success('智创聚合生成成功', { description: toastDesc });
+      
+      setGenerationProgress(100);
+      if (songs.length > 0 && songs[0].audio_url) {
+        setGeneratedAudioUrl(songs[0].audio_url);
+      }
+
+    } catch (error) {
+      console.error('[LCONAI] Generate error:', error);
+      const errMsg = error instanceof Error
+        ? error.message
+        : (typeof error === 'string' ? error : JSON.stringify(error));
+      toast.error('智创聚合生成失败', { description: errMsg || '网络异常，请检查网络连接后重试' });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const handleVoiceUpload = (voice: VoiceFile) => {
     setUploadedVoices([...uploadedVoices, voice]);
   };
@@ -883,6 +988,55 @@ export default function CreatePage() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* LCONAI (智创聚合) Version Cards (only show when LCONAI tab is active) */}
+        {provider.value === 'lconai' && (
+          <div className="mb-6">
+            <div className="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-hide">
+              {LCONAI_VERSIONS.map((version) => (
+                <button
+                  key={version.key}
+                  onClick={() => lconaiVersion.toggle(version.key as typeof LCONAI_VERSIONS[number]['key'])}
+                  className={`
+                    relative flex-shrink-0 w-48 p-4 rounded-xl transition-all text-left
+                    ${lconaiVersion.value === version.key
+                      ? SELECTION_STYLES.selected
+                      : SELECTION_STYLES.unselected
+                    }
+                  `}
+                >
+                  {/* Badge */}
+                  {version.badge && (
+                    <span className={`
+                      absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-bold
+                      bg-purple-500/20 text-purple-300 border border-purple-500/30
+                    `}>
+                      {version.badge}
+                    </span>
+                  )}
+                  
+                  {/* Version Name */}
+                  <h3 className={`text-sm font-bold mb-1 ${lconaiVersion.value === version.key ? 'text-amber-400' : 'text-foreground'}`}>
+                    {version.name}
+                  </h3>
+                  
+                  {/* Description */}
+                  <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
+                    {version.desc}
+                  </p>
+                  
+                  {/* Credits */}
+                  <span className="text-[10px] text-muted-foreground/70">
+                    {version.credits}
+                  </span>
+                </button>
+              ))}
+            </div>
+            <p className="text-[11px] text-muted-foreground/60 mt-2">
+              🌐 智创聚合 —— Suno V3.5/V4/V5 全系列，独立通道，与 PuYue Suno 互不影响
+            </p>
           </div>
         )}
 
