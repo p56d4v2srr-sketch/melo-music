@@ -3,11 +3,13 @@
 import { useEffect, useRef, useState } from 'react';
 import WaveSurfer from 'wavesurfer.js';
 import { cn } from '@/lib/utils';
-import { Play, Pause, Download, Share2, SkipBack, SkipForward, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Play, Pause, Download, Share2, SkipBack, SkipForward, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
 
 interface AudioCandidate {
   url: string;
   label?: string;
+  /** High quality audio URL (WAV/FLAC) if available */
+  hqUrl?: string;
 }
 
 interface MusicPlayerProps {
@@ -61,6 +63,7 @@ export function MusicPlayer({ audioUrl, candidates, title, provider, isGeneratin
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [currentIdx, setCurrentIdx] = useState(0);
+  const [showQualityMenu, setShowQualityMenu] = useState(false);
 
   // Build effective candidates list
   const effectiveCandidates: AudioCandidate[] = candidates && candidates.length > 0
@@ -143,16 +146,29 @@ export function MusicPlayer({ audioUrl, candidates, title, provider, isGeneratin
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const handleDownload = () => {
+  const handleDownload = (quality: 'standard' | 'high' = 'standard') => {
     if (!currentUrl) return;
+    setShowQualityMenu(false);
+    
+    // Determine which URL to use based on quality
+    const downloadUrl = quality === 'high' && currentCandidate?.hqUrl 
+      ? currentCandidate.hqUrl 
+      : currentUrl;
+    
+    const ext = quality === 'high' && currentCandidate?.hqUrl 
+      ? getUrlExtension(currentCandidate.hqUrl)
+      : getUrlExtension(currentUrl);
+    
+    const qualitySuffix = quality === 'high' ? '-HQ' : '';
     const filename = buildDownloadFilename(
       title || 'melo-music',
       provider || 'ai',
       currentIdx,
-      currentUrl
-    );
-    const downloadUrl = `/api/download-song?url=${encodeURIComponent(currentUrl)}&filename=${encodeURIComponent(filename)}`;
-    window.open(downloadUrl, '_self');
+      downloadUrl
+    ).replace(`.${ext}`, `${qualitySuffix}.${ext}`);
+    
+    const apiDownloadUrl = `/api/download-song?url=${encodeURIComponent(downloadUrl)}&filename=${encodeURIComponent(filename)}`;
+    window.open(apiDownloadUrl, '_self');
   };
 
   const handleShare = async () => {
@@ -338,13 +354,51 @@ export function MusicPlayer({ audioUrl, candidates, title, provider, isGeneratin
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={handleDownload}
-              className="p-2 rounded-full hover:bg-white/10 transition-colors"
-              title={`下载${hasMultiple ? ` (第 ${currentIdx + 1} 首)` : ''}`}
-            >
-              <Download className="w-4 h-4" />
-            </button>
+            {/* Download with quality selection */}
+            <div className="relative">
+              <button
+                onClick={() => setShowQualityMenu(!showQualityMenu)}
+                className="p-2 rounded-full hover:bg-white/10 transition-colors flex items-center gap-0.5"
+                title={`下载${hasMultiple ? ` (第 ${currentIdx + 1} 首)` : ''}`}
+              >
+                <Download className="w-4 h-4" />
+                <ChevronDown className="w-2.5 h-2.5" />
+              </button>
+              {/* Quality dropdown menu */}
+              {showQualityMenu && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-40" 
+                    onClick={() => setShowQualityMenu(false)} 
+                  />
+                  <div className="absolute right-0 bottom-full mb-2 z-50 min-w-[140px] glass-card p-1.5 border border-white/10 shadow-xl">
+                    <button
+                      onClick={() => handleDownload('standard')}
+                      className="w-full text-left px-3 py-2 text-xs rounded hover:bg-white/10 transition-colors flex items-center justify-between"
+                    >
+                      <span>标准质量</span>
+                      <span className="text-muted-foreground">MP3</span>
+                    </button>
+                    {currentCandidate?.hqUrl && (
+                      <button
+                        onClick={() => handleDownload('high')}
+                        className="w-full text-left px-3 py-2 text-xs rounded hover:bg-white/10 transition-colors flex items-center justify-between group"
+                      >
+                        <span className="text-primary font-medium">最高质量</span>
+                        <span className="px-1.5 py-0.5 text-[10px] bg-primary/20 text-primary rounded">
+                          {getUrlExtension(currentCandidate.hqUrl).toUpperCase()}
+                        </span>
+                      </button>
+                    )}
+                    {!currentCandidate?.hqUrl && (
+                      <div className="px-3 py-2 text-[10px] text-muted-foreground/60 text-center">
+                        高品质不可用
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
             <button
               onClick={handleShare}
               className="p-2 rounded-full hover:bg-white/10 transition-colors"

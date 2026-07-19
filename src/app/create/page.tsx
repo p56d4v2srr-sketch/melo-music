@@ -11,13 +11,14 @@ import { VoiceUpload, type VoiceFile } from '@/components/voice-upload';
 import { MusicPlayer } from '@/components/music-player';
 import { DeepThinkingLyrics } from '@/components/deep-thinking-lyrics';
 import { Button } from '@/components/ui/button';
-import { Sparkles, Loader2, AlertTriangle, Library, Mic2 } from 'lucide-react';
+import { Sparkles, Loader2, AlertTriangle, Library, Mic2, Languages } from 'lucide-react';
 import { analyzeLyrics, type SanitizeResult } from '@/lib/lyrics-sanitizer';
 import { useToggleSelection } from '@/hooks/useToggleSelection';
 import { useMultiToggleSelection } from '@/hooks/useMultiToggleSelection';
 import { SELECTION_STYLES } from '@/lib/ui-tokens';
 import { GenreLibraryDrawer } from '@/components/genre-library-drawer';
 import { ArtistLibraryDrawer } from '@/components/artist-library-drawer';
+import { VocalWeightSliders, weightsToPrompt, type VocalWeights } from '@/components/vocal-weight-sliders';
 import { GENRES } from '@/data/genres';
 import { ARTISTS, getArtistById } from '@/data/artists';
 
@@ -141,6 +142,41 @@ export default function CreatePage() {
     structureTagCount: 0,
     totalLines: 0,
   });
+
+  // ========== Vocal Weight Sliders ==========
+  const [vocalWeights, setVocalWeights] = useState<VocalWeights | null>(null);
+  
+  // ========== Lyrics Translation ==========
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [translatedLyrics, setTranslatedLyrics] = useState<string | null>(null);
+  const [showTranslation, setShowTranslation] = useState(false);
+
+  const handleTranslateLyrics = async (targetLang: string) => {
+    if (!lyrics.trim()) {
+      toast.error('请先输入歌词');
+      return;
+    }
+    setIsTranslating(true);
+    try {
+      const res = await fetch('/api/translate-lyrics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lyrics, targetLang }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTranslatedLyrics(data.data.translated);
+        setShowTranslation(true);
+        toast.success('翻译完成');
+      } else {
+        toast.error(data.error || '翻译失败');
+      }
+    } catch {
+      toast.error('翻译请求失败');
+    } finally {
+      setIsTranslating(false);
+    }
+  };
 
   // PuLe-specific state
   const [puleItemIds, setPuleItemIds] = useState<string[]>([]);
@@ -1229,6 +1265,72 @@ export default function CreatePage() {
             )}
             
             <DeepThinkingLyrics onLyricsGenerated={handleLyricsFromAI} />
+            
+            {/* Vocal Weight Sliders */}
+            <VocalWeightSliders 
+              value={vocalWeights || undefined}
+              onChange={setVocalWeights}
+            />
+            
+            {/* Lyrics Translation */}
+            <div className="glass-card p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                  <Languages className="w-4 h-4 text-primary" />
+                  歌词翻译
+                </h3>
+                {showTranslation && (
+                  <button
+                    onClick={() => setShowTranslation(!showTranslation)}
+                    className="text-xs text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    {showTranslation ? '隐藏翻译' : '显示翻译'}
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => handleTranslateLyrics('en')}
+                  disabled={isTranslating || !lyrics.trim()}
+                  className="px-3 py-1.5 text-xs rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                >
+                  {isTranslating ? <Loader2 className="w-3 h-3 animate-spin" /> : <span>🇺🇸</span>}
+                  翻译成英文
+                </button>
+                <button
+                  onClick={() => handleTranslateLyrics('ja')}
+                  disabled={isTranslating || !lyrics.trim()}
+                  className="px-3 py-1.5 text-xs rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                >
+                  {isTranslating ? <Loader2 className="w-3 h-3 animate-spin" /> : <span>🇯🇵</span>}
+                  翻译成日文
+                </button>
+                <button
+                  onClick={() => handleTranslateLyrics('ko')}
+                  disabled={isTranslating || !lyrics.trim()}
+                  className="px-3 py-1.5 text-xs rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                >
+                  {isTranslating ? <Loader2 className="w-3 h-3 animate-spin" /> : <span>🇰🇷</span>}
+                  翻译成韩文
+                </button>
+              </div>
+              {showTranslation && translatedLyrics && (
+                <div className="mt-3 p-3 bg-white/5 rounded-lg border border-white/5">
+                  <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono leading-relaxed">
+                    {translatedLyrics}
+                  </pre>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(translatedLyrics);
+                      toast.success('翻译已复制');
+                    }}
+                    className="mt-2 text-xs text-primary hover:text-primary/80 transition-colors"
+                  >
+                    复制翻译
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Right Column - Result */}
@@ -1237,7 +1339,11 @@ export default function CreatePage() {
               audioUrl={generatedAudioUrl}
               candidates={
                 provider.value === 'pule' && puleSongs.length > 0
-                  ? puleSongs.filter(s => s.audio_url).map((s, i) => ({ url: s.audio_url!, label: `第 ${i + 1} 首` }))
+                  ? puleSongs.filter(s => s.audio_url).map((s, i) => ({ 
+                      url: s.audio_url!, 
+                      label: `第 ${i + 1} 首`,
+                      hqUrl: s.audio_hi_url || undefined,
+                    }))
                   : provider.value === 'suno' && sunoSongs.length > 0
                     ? sunoSongs.filter(s => s.audio_url).map((s, i) => ({ url: s.audio_url!, label: `第 ${i + 1} 首` }))
                     : undefined
