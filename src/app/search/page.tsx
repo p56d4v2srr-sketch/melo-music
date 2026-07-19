@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Navbar } from '@/components/navbar';
 import { Search, Music, User, Tag, X, TrendingUp } from 'lucide-react';
@@ -32,6 +32,14 @@ interface Artist {
 const hotSearches = ['电子', '流行', '摇滚', '说唱', 'R&B', '民谣', '爵士', '古典', '治愈', '浪漫'];
 
 export default function SearchPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gradient-dark flex items-center justify-center"><div className="text-white">Loading...</div></div>}>
+      <SearchPageContent />
+    </Suspense>
+  );
+}
+
+function SearchPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const initialQuery = searchParams.get('q') || '';
