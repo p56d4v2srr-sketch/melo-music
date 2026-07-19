@@ -64,7 +64,7 @@ export class SunoApiError extends Error {
   }
 }
 
-function getErrorMessage(statusCode: number, body: any): string {
+function getErrorMessage(statusCode: number, body: Record<string, unknown>): string {
   // 确保 serverMessage 是字符串，避免 [object Object]
   const rawMessage = body?.message || body?.error || '未知错误';
   const serverMessage = typeof rawMessage === 'string' 
@@ -103,7 +103,7 @@ export async function generateSuno(params: SunoGenerateParams): Promise<SunoGene
   const model = params.model || 'chirp-v5.5';
   
   // 构建请求体
-  let requestBody: Record<string, any>;
+  let requestBody: Record<string, unknown>;
   let endpoint: string;
   
   if (params.mode === 'prompt') {
@@ -153,6 +153,12 @@ export async function generateSuno(params: SunoGenerateParams): Promise<SunoGene
     if (params.style_weight !== undefined) requestBody.style_weight = params.style_weight;
     if (params.weirdness_constraint !== undefined) requestBody.weirdness_constraint = params.weirdness_constraint;
   }
+  
+  // 添加最高音质配置：stereo 双声道，256kbps+，优先高码率
+  requestBody.audio_quality = 'high';
+  requestBody.output_format = 'mp3';
+  requestBody.bitrate = '320';
+  requestBody.channels = 'stereo';
   
   console.log(`[suno] Submitting ${params.mode} mode request:`, {
     endpoint,

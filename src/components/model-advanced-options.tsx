@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronDown, Music, Mic, Tag } from 'lucide-react';
+import { ChevronDown, Music, Mic, Tag, User, Sparkles, Upload, Lock } from 'lucide-react';
 
 interface ModelAdvancedOptionsProps {
   provider: string;
@@ -11,7 +11,35 @@ interface ModelAdvancedOptionsProps {
   onLyricsChange: (value: string) => void;
   styleOfMusic: string;
   onStyleOfMusicChange: (value: string) => void;
+  gender: string;
+  onGenderChange: (value: string) => void;
+  timbres: string[];
+  onTimbresChange: (value: string) => void;
 }
+
+// 人声性别选项
+const VOCAL_GENDERS = [
+  { value: 'male', label: '男声', icon: '👨' },
+  { value: 'female', label: '女声', icon: '👩' },
+  { value: 'duet', label: '男女对唱', icon: '👥' },
+  { value: 'instrumental', label: '纯乐器', icon: '🎹' },
+];
+
+// 音色标签（最多选3个）
+const TIMBRE_TAGS = [
+  { value: 'soft', label: '柔美', icon: '🌸' },
+  { value: 'raspy', label: '沙哑', icon: '🔥' },
+  { value: 'bright', label: '清亮', icon: '✨' },
+  { value: 'deep', label: '低沉', icon: '🌑' },
+  { value: 'opera', label: '戏腔', icon: '🎭' },
+  { value: 'child', label: '童声', icon: '👼' },
+  { value: 'ethereal', label: '空灵', icon: '🌊' },
+  { value: 'magnetic', label: '磁性', icon: '🎤' },
+  { value: 'lazy', label: '慵懒', icon: '💫' },
+  { value: 'sweet', label: '甜美', icon: '🍬' },
+  { value: 'high', label: '高亢', icon: '🔊' },
+  { value: 'whisper', label: '呢喃', icon: '🕯️' },
+];
 
 // 歌词标签
 const LYRICS_TAGS = [
@@ -82,6 +110,10 @@ export function ModelAdvancedOptions({
   onLyricsChange,
   styleOfMusic,
   onStyleOfMusicChange,
+  gender,
+  onGenderChange,
+  timbres,
+  onTimbresChange,
 }: ModelAdvancedOptionsProps) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -95,8 +127,19 @@ export function ModelAdvancedOptions({
     onStyleOfMusicChange(newStyle);
   };
 
+  const toggleTimbre = (value: string) => {
+    // 如果已选中，取消选中；如果未选中且未满3个，选中
+    if (timbres.includes(value)) {
+      onTimbresChange(value);
+    } else if (timbres.length < 3) {
+      onTimbresChange(value);
+    }
+  };
+
+  const hasConfig = songName || lyrics || styleOfMusic || gender || timbres.length > 0;
+
   return (
-    <div className="mb-4">
+    <div className="mb-6">
       {/* Collapsible Header */}
       <button
         onClick={() => setIsOpen(!isOpen)}
@@ -107,7 +150,7 @@ export function ModelAdvancedOptions({
         <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-muted-foreground/60">
           {provider.toUpperCase()}
         </span>
-        {(songName || lyrics || styleOfMusic) && (
+        {hasConfig && (
           <span className="ml-auto px-1.5 py-0.5 rounded bg-amber-400/10 text-amber-400 text-[10px]">
             已配置
           </span>
@@ -116,7 +159,99 @@ export function ModelAdvancedOptions({
 
       {/* Expanded Content */}
       {isOpen && (
-        <div className="mt-3 space-y-4 pl-4 border-l border-white/10">
+        <div className="mt-3 space-y-5 pl-4 border-l border-white/10">
+          {/* Vocal Gender - Single Select */}
+          <div>
+            <label className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
+              <User className="w-3.5 h-3.5" />
+              人声性别
+            </label>
+            <div className="grid grid-cols-4 gap-2">
+              {VOCAL_GENDERS.map(({ value, label, icon }) => (
+                <button
+                  key={value}
+                  onClick={() => onGenderChange(gender === value ? '' : value)}
+                  className={`px-3 py-2 rounded-lg text-xs border transition-all flex items-center justify-center gap-1.5 ${
+                    gender === value
+                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/50'
+                      : 'bg-white/5 text-muted-foreground border-white/10 hover:border-white/30'
+                  }`}
+                >
+                  <span>{icon}</span>
+                  <span>{label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Timbre Tags - Multi Select (max 3) */}
+          <div>
+            <label className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
+              <Sparkles className="w-3.5 h-3.5" />
+              音色标签
+              <span className="text-muted-foreground/50">（最多选 3 个）</span>
+              {timbres.length > 0 && (
+                <span className="ml-auto text-amber-400">{timbres.length}/3</span>
+              )}
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {TIMBRE_TAGS.map(({ value, label, icon }) => {
+                const isSelected = timbres.includes(value);
+                const isDisabled = !isSelected && timbres.length >= 3;
+                return (
+                  <button
+                    key={value}
+                    onClick={() => !isDisabled && toggleTimbre(value)}
+                    disabled={isDisabled}
+                    className={`px-3 py-1.5 rounded-lg text-xs border transition-all flex items-center gap-1 ${
+                      isSelected
+                        ? 'bg-purple-500/20 text-purple-300 border-purple-500/50'
+                        : isDisabled
+                        ? 'bg-white/3 text-muted-foreground/30 border-white/5 cursor-not-allowed'
+                        : 'bg-white/5 text-muted-foreground border-white/10 hover:border-white/30'
+                    }`}
+                  >
+                    <span>{icon}</span>
+                    <span>{label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Voice Library - Coming Soon */}
+          <div className="flex items-center gap-3 p-3 rounded-lg bg-white/3 border border-white/5 opacity-60">
+            <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
+              <Lock className="w-4 h-4 text-muted-foreground/50" />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">我的音色库</span>
+                <span className="px-1.5 py-0.5 rounded bg-white/10 text-[10px] text-muted-foreground/60">Coming Soon</span>
+              </div>
+              <p className="text-[10px] text-muted-foreground/50 mt-0.5">保存和管理您的专属音色</p>
+            </div>
+          </div>
+
+          {/* Upload Voice - Coming Soon */}
+          <div className="flex items-center gap-3 p-3 rounded-lg bg-white/3 border border-white/5 opacity-60">
+            <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
+              <Upload className="w-4 h-4 text-muted-foreground/50" />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">上传我的声音</span>
+                <span className="px-1.5 py-0.5 rounded bg-white/10 text-[10px] text-muted-foreground/60">Coming Soon</span>
+              </div>
+              <p className="text-[10px] text-muted-foreground/50 mt-0.5">上传音频样本，克隆您的专属音色</p>
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="border-t border-white/5 pt-4">
+            <p className="text-[10px] text-muted-foreground/40 mb-3">更多创作选项</p>
+          </div>
+
           {/* Song Name */}
           <div>
             <label className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getSupabaseClient } from '@/storage/database/supabase-client';
 
+// POST /api/interactions/comment - 发表评论
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -7,77 +9,83 @@ export async function POST(request: NextRequest) {
 
     if (!songId || !userId || !content) {
       return NextResponse.json(
-        { error: '缺少必要参数' },
+        { success: false, error: '缺少必要参数' },
         { status: 400 }
       );
     }
 
-    // In production, this would insert into Supabase
-    return NextResponse.json({
-      success: true,
-      message: '评论成功',
-      comment: {
-        id: `comment-${Date.now()}`,
-        songId,
-        userId,
+    const client = getSupabaseClient();
+
+    const { data, error } = await client
+      .from('comments')
+      .insert({
+        song_id: songId,
+        user_id: userId,
         content,
-        parentId: parentId || null,
-        likeCount: 0,
-        isPinned: false,
-        createdAt: new Date().toISOString(),
-      },
-    });
+        parent_id: parentId || null,
+      })
+      .select()
+      .single();
+    if (error) throw new Error(`发表评论失败: ${error.message}`);
+
+    return NextResponse.json({ success: true, data });
   } catch (error) {
-    console.error('Comment interaction error:', error);
+    console.error('发表评论失败:', error);
     return NextResponse.json(
-      { error: '评论失败' },
+      { success: false, error: '发表评论失败' },
       { status: 500 }
     );
   }
 }
 
+// GET /api/interactions/comment - 获取评论列表
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const songId = searchParams.get('songId');
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '20');
+    const offset = (page - 1) * limit;
 
     if (!songId) {
       return NextResponse.json(
-        { error: '缺少 songId 参数' },
+        { success: false, error: '缺少歌曲ID' },
         { status: 400 }
       );
     }
 
-    // Mock comments for demo
+    const client = getSupabaseClient();
+
+    const { data, error, count } = await client
+      .from('comments')
+      .select('id, content, parent_id, like_count, created_at, user_id, users!comments_user_id_users_id_fk(nickname, avatar)', { count: 'exact' })
+      .eq('song_id', songId)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+    if (error) throw new Error(`获取评论失败: ${error.message}`);
+
     return NextResponse.json({
       success: true,
-      comments: [
-        {
-          id: 'comment-1',
-          songId,
-          userId: 'artist-2',
-          content: '太棒了！这首歌真的很有感染力 🎵',
-          likeCount: 234,
-          isPinned: true,
-          createdAt: '2024-01-16T08:00:00Z',
-          user: { nickname: '深夜调频', avatar: 'https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=200&h=200&fit=crop' },
-        },
-        {
-          id: 'comment-2',
-          songId,
-          userId: 'artist-3',
-          content: '编曲做得很精致，循环了好多遍',
-          likeCount: 89,
-          isPinned: false,
-          createdAt: '2024-01-16T10:00:00Z',
-          user: { nickname: '赛博诗人', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&h=200&fit=crop' },
-        },
-      ],
+      data: {
+        comments: (data || []).map((c: any) => ({
+          id: c.id,
+          content: c.content,
+          parentId: c.parent_id,
+          likeCount: c.like_count,
+          createdAt: c.created_at,
+          userId: c.user_id,
+          userNickname: c.users?.nickname || '匿名',
+          userAvatar: c.users?.avatar || null,
+        })),
+        total: count || 0,
+        page,
+        limit,
+      },
     });
   } catch (error) {
-    console.error('Get comments error:', error);
+    console.error('获取评论列表失败:', error);
     return NextResponse.json(
-      { error: '获取评论失败' },
+      { success: false, error: '获取评论列表失败' },
       { status: 500 }
     );
   }

@@ -1,83 +1,164 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Navbar } from '@/components/navbar';
-import { mockNotifications, formatCount } from '@/lib/mock-data';
-import { cn } from '@/lib/utils';
-import {
-  Heart,
-  MessageCircle,
-  UserPlus,
-  AtSign,
-  Bell,
-  Check,
-  CheckCheck,
-  Filter,
-} from 'lucide-react';
+import { useAuth } from '@/lib/auth-context';
+import { Heart, MessageCircle, UserPlus, AtSign, Bell, Check, CheckCheck } from 'lucide-react';
 import Link from 'next/link';
+import { cn } from '@/lib/utils';
 
-type FilterType = 'all' | 'like' | 'comment' | 'follow' | 'mention';
+interface Notification {
+  id: string;
+  type: 'like' | 'comment' | 'follow' | 'mention';
+  from_user_id: string;
+  song_id?: string;
+  comment_id?: string;
+  content?: string;
+  is_read: boolean;
+  created_at: string;
+  from_user?: {
+    id: string;
+    nickname: string;
+    avatar: string;
+  };
+  song?: {
+    id: string;
+    title: string;
+    cover_url: string;
+  };
+}
 
-const filters = [
-  { key: 'all' as const, label: '全部', icon: Bell },
-  { key: 'like' as const, label: '点赞', icon: Heart },
-  { key: 'comment' as const, label: '评论', icon: MessageCircle },
-  { key: 'follow' as const, label: '新粉丝', icon: UserPlus },
-  { key: 'mention' as const, label: '@提及', icon: AtSign },
+const notificationTypes = [
+  { value: 'all', label: '全部' },
+  { value: 'like', label: '点赞', icon: Heart },
+  { value: 'comment', label: '评论', icon: MessageCircle },
+  { value: 'follow', label: '关注', icon: UserPlus },
+  { value: 'mention', label: '@提及', icon: AtSign },
 ];
 
-const notificationIcons: Record<string, React.ComponentType<{ className?: string }>> = {
-  like: Heart,
-  comment: MessageCircle,
-  follow: UserPlus,
-  mention: AtSign,
-};
-
-const notificationColors: Record<string, string> = {
-  like: 'bg-red-500/20 text-red-400',
-  comment: 'bg-blue-500/20 text-blue-400',
-  follow: 'bg-purple-500/20 text-purple-400',
-  mention: 'bg-green-500/20 text-green-400',
-};
-
 export default function NotificationsPage() {
-  const [activeFilter, setActiveFilter] = useState<FilterType>('all');
-  const [notifications, setNotifications] = useState(mockNotifications);
+  const { user } = useAuth();
+  const [filter, setFilter] = useState('all');
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loading, setLoading] = useState(true);
 
-  const filteredNotifications =
-    activeFilter === 'all'
-      ? notifications
-      : notifications.filter((n) => n.type === activeFilter);
+  useEffect(() => {
+    if (!user) return;
 
-  const unreadCount = notifications.filter((n) => !n.is_read).length;
+    const fetchNotifications = async () => {
+      setLoading(true);
+      try {
+        const typeParam = filter !== 'all' ? `&type=${filter}` : '';
+        const res = await fetch(`/api/notifications${typeParam}`, {
+          headers: { 'x-user-id': user.id }
+        });
+        const data = await res.json();
+        if (data.success) {
+          setNotifications(data.data.notifications || []);
+          setUnreadCount(data.data.unreadCount || 0);
+        }
+      } catch (error) {
+        console.error('Fetch notifications error:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const markAllAsRead = () => {
-    setNotifications(notifications.map((n) => ({ ...n, is_read: true })));
+    fetchNotifications();
+  }, [user, filter]);
+
+  const handleMarkAllRead = async () => {
+    if (!user) return;
+    try {
+      await fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': user.id
+        },
+        body: JSON.stringify({ markAllRead: true })
+      });
+      setNotifications(notifications.map(n => ({ ...n, is_read: true })));
+      setUnreadCount(0);
+    } catch (error) {
+      console.error('Mark all read error:', error);
+    }
   };
 
-  const markAsRead = (id: string) => {
-    setNotifications(
-      notifications.map((n) => (n.id === id ? { ...n, is_read: true } : n))
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case 'like': return <Heart className="w-5 h-5 text-red-500 fill-red-500" />;
+      case 'comment': return <MessageCircle className="w-5 h-5 text-blue-500" />;
+      case 'follow': return <UserPlus className="w-5 h-5 text-green-500" />;
+      case 'mention': return <AtSign className="w-5 h-5 text-purple-500" />;
+      default: return <Bell className="w-5 h-5 text-muted-foreground" />;
+    }
+  };
+
+  const getNotificationText = (notification: Notification) => {
+    switch (notification.type) {
+      case 'like':
+        return `赞了你的作品${notification.song ? `「${notification.song.title}」` : ''}`;
+      case 'comment':
+        return notification.content || '评论了你的作品';
+      case 'follow':
+        return '关注了你';
+      case 'mention':
+        return `在评论中@了你`;
+      default:
+        return notification.content || '';
+    }
+  };
+
+  const formatTime = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (minutes < 1) return '刚刚';
+    if (minutes < 60) return `${minutes}分钟前`;
+    if (hours < 24) return `${hours}小时前`;
+    if (days < 7) return `${days}天前`;
+    return date.toLocaleDateString();
+  };
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <main className="pt-20 pb-8 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto">
+          <div className="text-center py-12">
+            <Bell className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-muted-foreground mb-4">请先登录查看通知</p>
+            <Link href="/login" className="text-primary hover:underline">
+              去登录
+            </Link>
+          </div>
+        </main>
+      </div>
     );
-  };
+  }
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-
-      <main className="pt-20 pb-8 px-4 sm:px-6 lg:px-8 max-w-3xl mx-auto">
+      <main className="pt-20 pb-8 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gradient-gold mb-2">通知中心</h1>
-            <p className="text-muted-foreground">
-              {unreadCount > 0 ? `${unreadCount} 条未读通知` : '暂无未读通知'}
-            </p>
+            <h1 className="text-2xl font-bold text-foreground">通知</h1>
+            {unreadCount > 0 && (
+              <p className="text-sm text-muted-foreground">{unreadCount} 条未读</p>
+            )}
           </div>
           {unreadCount > 0 && (
             <button
-              onClick={markAllAsRead}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm text-primary hover:bg-primary/10 transition-all"
+              onClick={handleMarkAllRead}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               <CheckCheck className="w-4 h-4" />
               全部已读
@@ -85,108 +166,102 @@ export default function NotificationsPage() {
           )}
         </div>
 
-        {/* Filters */}
+        {/* Filter Tabs */}
         <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-          {filters.map((filter) => {
-            const Icon = filter.icon;
-            const count =
-              filter.key === 'all'
-                ? notifications.length
-                : notifications.filter((n) => n.type === filter.key).length;
-            return (
-              <button
-                key={filter.key}
-                onClick={() => setActiveFilter(filter.key)}
-                className={cn(
-                  'flex items-center gap-2 px-4 py-2 rounded-xl whitespace-nowrap transition-all',
-                  activeFilter === filter.key
-                    ? 'gradient-gold-purple text-white glow-gold'
-                    : 'glass-card text-muted-foreground hover:text-foreground'
-                )}
-              >
-                <Icon className="w-4 h-4" />
-                {filter.label}
-                {count > 0 && (
-                  <span className="px-1.5 py-0.5 text-xs rounded-full bg-white/20">
-                    {count}
-                  </span>
-                )}
-              </button>
-            );
-          })}
+          {notificationTypes.map(type => (
+            <button
+              key={type.value}
+              onClick={() => setFilter(type.value)}
+              className={cn(
+                'flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors',
+                filter === type.value
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-white/5 text-muted-foreground hover:bg-white/10'
+              )}
+            >
+              {type.icon && <type.icon className="w-4 h-4" />}
+              {type.label}
+            </button>
+          ))}
         </div>
+
+        {/* Loading */}
+        {loading && (
+          <div className="flex items-center justify-center py-12">
+            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          </div>
+        )}
 
         {/* Notifications List */}
-        <div className="space-y-2">
-          {filteredNotifications.length === 0 ? (
-            <div className="glass-card p-12 rounded-xl text-center">
-              <Bell className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">暂无通知</p>
-            </div>
-          ) : (
-            filteredNotifications.map((notification) => {
-              const Icon = notificationIcons[notification.type] || Bell;
-              const colorClass = notificationColors[notification.type] || 'bg-white/10 text-muted-foreground';
-
-              return (
-                <div
-                  key={notification.id}
-                  onClick={() => markAsRead(notification.id)}
-                  className={cn(
-                    'glass-card p-4 flex items-start gap-4 transition-all cursor-pointer hover:bg-white/10',
-                    !notification.is_read && 'border-l-2 border-primary bg-primary/5'
-                  )}
-                >
-                  {/* Icon */}
-                  <div className={cn('w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0', colorClass)}>
-                    <Icon className="w-5 h-5" />
-                  </div>
-
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      {notification.from_user && (
-                        <img
-                          src={notification.from_user.avatar}
-                          alt={notification.from_user.nickname}
-                          className="w-5 h-5 rounded-full"
-                        />
-                      )}
-                      <span className="text-sm font-medium text-foreground">
-                        {notification.from_user?.nickname || '系统'}
-                      </span>
-                      {!notification.is_read && (
-                        <span className="w-2 h-2 rounded-full bg-primary" />
-                      )}
-                    </div>
-                    <p className="text-sm text-muted-foreground">{notification.content}</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {new Date(notification.created_at).toLocaleDateString('zh-CN', {
-                        month: 'short',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </p>
-                  </div>
-
-                  {/* Action */}
-                  {!notification.is_read && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        markAsRead(notification.id);
-                      }}
-                      className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all"
-                    >
-                      <Check className="w-4 h-4" />
-                    </button>
-                  )}
+        {!loading && (
+          <div className="space-y-2">
+            {notifications.map(notification => (
+              <div
+                key={notification.id}
+                className={cn(
+                  'flex items-start gap-4 p-4 rounded-xl transition-colors',
+                  notification.is_read ? 'bg-card' : 'bg-primary/5 border border-primary/20'
+                )}
+              >
+                {/* Icon */}
+                <div className="flex-shrink-0 mt-1">
+                  {getNotificationIcon(notification.type)}
                 </div>
-              );
-            })
-          )}
-        </div>
+
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start gap-3">
+                    <Link href={`/artist/${notification.from_user_id}`} className="flex-shrink-0">
+                      <img
+                        src={notification.from_user?.avatar || '/default-avatar.png'}
+                        alt=""
+                        className="w-10 h-10 rounded-full object-cover"
+                      />
+                    </Link>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-foreground">
+                        <Link href={`/artist/${notification.from_user_id}`} className="font-medium hover:text-primary">
+                          {notification.from_user?.nickname || '未知用户'}
+                        </Link>
+                        {' '}{getNotificationText(notification)}
+                      </p>
+                      {notification.song && (
+                        <Link
+                          href={`/song/${notification.song.id}`}
+                          className="inline-flex items-center gap-2 mt-2 p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+                        >
+                          <img
+                            src={notification.song.cover_url}
+                            alt={notification.song.title}
+                            className="w-8 h-8 rounded object-cover"
+                          />
+                          <span className="text-sm text-muted-foreground truncate">
+                            {notification.song.title}
+                          </span>
+                        </Link>
+                      )}
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {formatTime(notification.created_at)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Read indicator */}
+                {!notification.is_read && (
+                  <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0 mt-2" />
+                )}
+              </div>
+            ))}
+
+            {notifications.length === 0 && (
+              <div className="text-center py-12">
+                <Bell className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">暂无通知</p>
+              </div>
+            )}
+          </div>
+        )}
       </main>
     </div>
   );

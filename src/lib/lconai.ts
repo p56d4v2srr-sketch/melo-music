@@ -163,6 +163,12 @@ export async function submitLconaiMusic(params: LconaiGenerateParams): Promise<L
     };
   }
   
+  // 添加最高音质配置：stereo 双声道，256kbps+
+  requestBody.audio_quality = 'high';
+  requestBody.output_format = 'mp3';
+  requestBody.bitrate = '320';
+  requestBody.channels = 'stereo';
+  
   console.log(`[lconai] Submitting ${params.mode} mode request:`, {
     mv,
     hasLyrics: !!params.lyrics,
@@ -170,7 +176,7 @@ export async function submitLconaiMusic(params: LconaiGenerateParams): Promise<L
   });
   
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 60000);
+  const timeoutId = setTimeout(() => controller.abort(), 120000);
   
   try {
     const response = await fetch(`${apiBase}/suno/submit/music`, {
@@ -250,7 +256,7 @@ export async function fetchLconaiTask(taskId: string): Promise<LconaiFetchData> 
   console.log(`[lconai] Fetching task: ${taskId}`);
   
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 60000);
+  const timeoutId = setTimeout(() => controller.abort(), 120000);
   
   try {
     const response = await fetch(`${apiBase}/suno/fetch/${taskId}`, {

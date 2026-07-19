@@ -1,266 +1,337 @@
-import { sql } from "drizzle-orm";
-import {
-  pgTable,
-  varchar,
-  text,
-  timestamp,
-  boolean,
-  integer,
-  jsonb,
-  serial,
-  index,
-  uniqueIndex,
-} from "drizzle-orm/pg-core";
+import { pgTable, uniqueIndex, index, foreignKey, varchar, timestamp, serial, integer, text, boolean, jsonb } from "drizzle-orm/pg-core"
+import { sql } from "drizzle-orm"
 
-// Keep the health check table
+const gen_random_uuid = () => sql`gen_random_uuid()`
+
+
+
+export const follows = pgTable("follows", {
+	id: varchar({ length: 36 }).default(gen_random_uuid()).primaryKey().notNull(),
+	followerId: varchar("follower_id", { length: 36 }).notNull(),
+	followingId: varchar("following_id", { length: 36 }).notNull(),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+	uniqueIndex("follows_follower_following_idx").using("btree", table.followerId.asc().nullsLast().op("text_ops"), table.followingId.asc().nullsLast().op("text_ops")),
+	index("follows_following_id_idx").using("btree", table.followingId.asc().nullsLast().op("text_ops")),
+	foreignKey({
+			columns: [table.followerId],
+			foreignColumns: [users.id],
+			name: "follows_follower_id_users_id_fk"
+		}),
+	foreignKey({
+			columns: [table.followingId],
+			foreignColumns: [users.id],
+			name: "follows_following_id_users_id_fk"
+		}),
+]);
+
 export const healthCheck = pgTable("health_check", {
-  id: serial().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" }).defaultNow(),
+	id: serial().notNull(),
+	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow(),
 });
 
-// Users table
-export const users = pgTable(
-  "users",
-  {
-    id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
-    nickname: varchar("nickname", { length: 100 }).notNull(),
-    avatar: varchar("avatar", { length: 500 }),
-    bio: text("bio"),
-    slogan: varchar("slogan", { length: 200 }),
-    is_ai_artist: boolean("is_ai_artist").default(false).notNull(),
-    follower_count: integer("follower_count").default(0).notNull(),
-    following_count: integer("following_count").default(0).notNull(),
-    song_count: integer("song_count").default(0).notNull(),
-    total_play_count: integer("total_play_count").default(0).notNull(),
-    created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-    updated_at: timestamp("updated_at", { withTimezone: true }),
-  },
-  (table) => [index("users_is_ai_artist_idx").on(table.is_ai_artist)]
-);
+export const hotSearch = pgTable("hot_search", {
+	id: varchar({ length: 36 }).default(gen_random_uuid()).primaryKey().notNull(),
+	keyword: varchar({ length: 100 }).notNull(),
+	category: varchar({ length: 20 }).default('song').notNull(),
+	score: integer().default(0).notNull(),
+	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+	index("hot_search_category_idx").using("btree", table.category.asc().nullsLast().op("text_ops")),
+	index("hot_search_score_idx").using("btree", table.score.asc().nullsLast().op("int4_ops")),
+]);
 
-// Songs table
-export const songs = pgTable(
-  "songs",
-  {
-    id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
-    title: varchar("title", { length: 200 }).notNull(),
-    artist_id: varchar("artist_id", { length: 36 }).notNull().references(() => users.id),
-    cover_url: varchar("cover_url", { length: 500 }),
-    cover_source: varchar("cover_source", { length: 16 }).default("ai"),
-    audio_url: varchar("audio_url", { length: 500 }).notNull(),
-    lyrics: text("lyrics"),
-    style_tags: jsonb("style_tags"),
-    description: text("description"),
-    duration: integer("duration").default(0).notNull(),
-    language: varchar("language", { length: 16 }).default("zh"),
-    vocal_type: varchar("vocal_type", { length: 16 }).default("female"),
-    mood: varchar("mood", { length: 32 }),
-    is_public: boolean("is_public").default(true).notNull(),
-    model_version: varchar("model_version", { length: 16 }).default("v5"),
-    provider: varchar("provider", { length: 32 }).default("acedata"),
-    play_count: integer("play_count").default(0).notNull(),
-    like_count: integer("like_count").default(0).notNull(),
-    collect_count: integer("collect_count").default(0).notNull(),
-    comment_count: integer("comment_count").default(0).notNull(),
-    is_published: boolean("is_published").default(true).notNull(),
-    is_original: boolean("is_original").default(true).notNull(),
-    created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-    updated_at: timestamp("updated_at", { withTimezone: true }),
-  },
-  (table) => [
-    index("songs_artist_id_idx").on(table.artist_id),
-    index("songs_created_at_idx").on(table.created_at),
-    index("songs_play_count_idx").on(table.play_count),
-    index("songs_like_count_idx").on(table.like_count),
-    index("songs_is_published_idx").on(table.is_published),
-    index("songs_is_public_idx").on(table.is_public),
-    index("songs_language_idx").on(table.language),
-    index("songs_mood_idx").on(table.mood),
-    index("songs_model_version_idx").on(table.model_version),
-    index("songs_provider_idx").on(table.provider),
-  ]
-);
+export const collects = pgTable("collects", {
+	id: varchar({ length: 36 }).default(gen_random_uuid()).primaryKey().notNull(),
+	userId: varchar("user_id", { length: 36 }).notNull(),
+	songId: varchar("song_id", { length: 36 }).notNull(),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+	index("collects_song_id_idx").using("btree", table.songId.asc().nullsLast().op("text_ops")),
+	uniqueIndex("collects_user_song_idx").using("btree", table.userId.asc().nullsLast().op("text_ops"), table.songId.asc().nullsLast().op("text_ops")),
+	foreignKey({
+			columns: [table.userId],
+			foreignColumns: [users.id],
+			name: "collects_user_id_users_id_fk"
+		}),
+	foreignKey({
+			columns: [table.songId],
+			foreignColumns: [songs.id],
+			name: "collects_song_id_songs_id_fk"
+		}),
+]);
 
-// Plays table (play records)
-export const plays = pgTable(
-  "plays",
-  {
-    id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
-    user_id: varchar("user_id", { length: 36 }).notNull().references(() => users.id),
-    song_id: varchar("song_id", { length: 36 }).notNull().references(() => songs.id),
-    played_at: timestamp("played_at", { withTimezone: true }).defaultNow().notNull(),
-    duration: integer("duration").default(0).notNull(),
-  },
-  (table) => [
-    index("plays_user_id_idx").on(table.user_id),
-    index("plays_song_id_idx").on(table.song_id),
-    index("plays_played_at_idx").on(table.played_at),
-  ]
-);
+export const likes = pgTable("likes", {
+	id: varchar({ length: 36 }).default(gen_random_uuid()).primaryKey().notNull(),
+	userId: varchar("user_id", { length: 36 }).notNull(),
+	songId: varchar("song_id", { length: 36 }).notNull(),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+	index("likes_song_id_idx").using("btree", table.songId.asc().nullsLast().op("text_ops")),
+	uniqueIndex("likes_user_song_idx").using("btree", table.userId.asc().nullsLast().op("text_ops"), table.songId.asc().nullsLast().op("text_ops")),
+	foreignKey({
+			columns: [table.userId],
+			foreignColumns: [users.id],
+			name: "likes_user_id_users_id_fk"
+		}),
+	foreignKey({
+			columns: [table.songId],
+			foreignColumns: [songs.id],
+			name: "likes_song_id_songs_id_fk"
+		}),
+]);
 
-// Likes table
-export const likes = pgTable(
-  "likes",
-  {
-    id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
-    user_id: varchar("user_id", { length: 36 }).notNull().references(() => users.id),
-    song_id: varchar("song_id", { length: 36 }).notNull().references(() => songs.id),
-    created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  },
-  (table) => [
-    uniqueIndex("likes_user_song_idx").on(table.user_id, table.song_id),
-    index("likes_song_id_idx").on(table.song_id),
-  ]
-);
+export const plays = pgTable("plays", {
+	id: varchar({ length: 36 }).default(gen_random_uuid()).primaryKey().notNull(),
+	userId: varchar("user_id", { length: 36 }).notNull(),
+	songId: varchar("song_id", { length: 36 }).notNull(),
+	playedAt: timestamp("played_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	duration: integer().default(0).notNull(),
+}, (table) => [
+	index("plays_played_at_idx").using("btree", table.playedAt.asc().nullsLast().op("timestamptz_ops")),
+	index("plays_song_id_idx").using("btree", table.songId.asc().nullsLast().op("text_ops")),
+	index("plays_user_id_idx").using("btree", table.userId.asc().nullsLast().op("text_ops")),
+	foreignKey({
+			columns: [table.userId],
+			foreignColumns: [users.id],
+			name: "plays_user_id_users_id_fk"
+		}),
+	foreignKey({
+			columns: [table.songId],
+			foreignColumns: [songs.id],
+			name: "plays_song_id_songs_id_fk"
+		}),
+]);
 
-// Collects table (favorites)
-export const collects = pgTable(
-  "collects",
-  {
-    id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
-    user_id: varchar("user_id", { length: 36 }).notNull().references(() => users.id),
-    song_id: varchar("song_id", { length: 36 }).notNull().references(() => songs.id),
-    created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  },
-  (table) => [
-    uniqueIndex("collects_user_song_idx").on(table.user_id, table.song_id),
-    index("collects_song_id_idx").on(table.song_id),
-  ]
-);
+export const users = pgTable("users", {
+	id: varchar({ length: 36 }).default(gen_random_uuid()).primaryKey().notNull(),
+	email: varchar({ length: 255 }),
+	nickname: varchar({ length: 100 }).notNull(),
+	avatar: varchar({ length: 500 }),
+	bio: text(),
+	slogan: varchar({ length: 200 }),
+	isAiArtist: boolean("is_ai_artist").default(false).notNull(),
+	followerCount: integer("follower_count").default(0).notNull(),
+	followingCount: integer("following_count").default(0).notNull(),
+	songCount: integer("song_count").default(0).notNull(),
+	totalPlayCount: integer("total_play_count").default(0).notNull(),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }),
+}, (table) => [
+	index("users_is_ai_artist_idx").using("btree", table.isAiArtist.asc().nullsLast().op("bool_ops")),
+]);
 
-// Follows table
-export const follows = pgTable(
-  "follows",
-  {
-    id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
-    follower_id: varchar("follower_id", { length: 36 }).notNull().references(() => users.id),
-    following_id: varchar("following_id", { length: 36 }).notNull().references(() => users.id),
-    created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  },
-  (table) => [
-    uniqueIndex("follows_follower_following_idx").on(table.follower_id, table.following_id),
-    index("follows_following_id_idx").on(table.following_id),
-  ]
-);
+export const artists = pgTable("artists", {
+	id: varchar({ length: 36 }).default(gen_random_uuid()).primaryKey().notNull(),
+	userId: varchar("user_id", { length: 36 }),
+	name: varchar({ length: 100 }).notNull(),
+	avatarUrl: varchar("avatar_url", { length: 500 }),
+	slogan: varchar({ length: 200 }),
+	bio: text(),
+	gender: varchar({ length: 20 }),
+	ageGroup: varchar("age_group", { length: 20 }),
+	personalityTags: jsonb("personality_tags"),
+	styleTags: jsonb("style_tags"),
+	singingTechniques: jsonb("singing_techniques"),
+	languagePreference: varchar("language_preference", { length: 20 }),
+	debutDate: varchar("debut_date", { length: 20 }),
+	region: varchar({ length: 50 }),
+	isAiGenerated: boolean("is_ai_generated").default(true).notNull(),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }),
+}, (table) => [
+	index("artists_is_ai_generated_idx").using("btree", table.isAiGenerated.asc().nullsLast().op("bool_ops")),
+	index("artists_user_id_idx").using("btree", table.userId.asc().nullsLast().op("text_ops")),
+	foreignKey({
+			columns: [table.userId],
+			foreignColumns: [users.id],
+			name: "artists_user_id_users_id_fk"
+		}),
+]);
 
-// Comments table
-export const comments = pgTable(
-  "comments",
-  {
-    id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
-    song_id: varchar("song_id", { length: 36 }).notNull().references(() => songs.id),
-    user_id: varchar("user_id", { length: 36 }).notNull().references(() => users.id),
-    parent_id: varchar("parent_id", { length: 36 }),
-    content: text("content").notNull(),
-    like_count: integer("like_count").default(0).notNull(),
-    is_pinned: boolean("is_pinned").default(false).notNull(),
-    created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  },
-  (table) => [
-    index("comments_song_id_idx").on(table.song_id),
-    index("comments_user_id_idx").on(table.user_id),
-    index("comments_parent_id_idx").on(table.parent_id),
-    index("comments_created_at_idx").on(table.created_at),
-  ]
-);
+export const aiAnalysis = pgTable("ai_analysis", {
+	id: varchar({ length: 36 }).default(gen_random_uuid()).primaryKey().notNull(),
+	songId: varchar("song_id", { length: 36 }).notNull(),
+	lyricsAnalysis: text("lyrics_analysis"),
+	songAnalysis: text("song_analysis"),
+	ratings: jsonb(),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+	uniqueIndex("ai_analysis_song_id_idx").using("btree", table.songId.asc().nullsLast().op("text_ops")),
+	foreignKey({
+			columns: [table.songId],
+			foreignColumns: [songs.id],
+			name: "ai_analysis_song_id_songs_id_fk"
+		}),
+]);
 
-// Hot search table
-export const hotSearch = pgTable(
-  "hot_search",
-  {
-    id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
-    keyword: varchar("keyword", { length: 100 }).notNull(),
-    category: varchar("category", { length: 20 }).notNull().default("song"),
-    score: integer("score").default(0).notNull(),
-    updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-  },
-  (table) => [
-    index("hot_search_category_idx").on(table.category),
-    index("hot_search_score_idx").on(table.score),
-  ]
-);
+export const comments = pgTable("comments", {
+	id: varchar({ length: 36 }).default(gen_random_uuid()).primaryKey().notNull(),
+	songId: varchar("song_id", { length: 36 }).notNull(),
+	userId: varchar("user_id", { length: 36 }).notNull(),
+	parentId: varchar("parent_id", { length: 36 }),
+	content: text().notNull(),
+	likeCount: integer("like_count").default(0).notNull(),
+	isPinned: boolean("is_pinned").default(false).notNull(),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+	index("comments_created_at_idx").using("btree", table.createdAt.asc().nullsLast().op("timestamptz_ops")),
+	index("comments_parent_id_idx").using("btree", table.parentId.asc().nullsLast().op("text_ops")),
+	index("comments_song_id_idx").using("btree", table.songId.asc().nullsLast().op("text_ops")),
+	index("comments_user_id_idx").using("btree", table.userId.asc().nullsLast().op("text_ops")),
+	foreignKey({
+			columns: [table.songId],
+			foreignColumns: [songs.id],
+			name: "comments_song_id_songs_id_fk"
+		}),
+	foreignKey({
+			columns: [table.userId],
+			foreignColumns: [users.id],
+			name: "comments_user_id_users_id_fk"
+		}),
+]);
 
-// AI analysis cache table
-export const aiAnalysis = pgTable(
-  "ai_analysis",
-  {
-    id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
-    song_id: varchar("song_id", { length: 36 }).notNull().references(() => songs.id),
-    lyrics_analysis: text("lyrics_analysis"),
-    song_analysis: text("song_analysis"),
-    ratings: jsonb("ratings"),
-    created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  },
-  (table) => [uniqueIndex("ai_analysis_song_id_idx").on(table.song_id)]
-);
+export const notifications = pgTable("notifications", {
+	id: varchar({ length: 36 }).default(gen_random_uuid()).primaryKey().notNull(),
+	userId: varchar("user_id", { length: 36 }).notNull(),
+	type: varchar({ length: 20 }).notNull(),
+	fromUserId: varchar("from_user_id", { length: 36 }),
+	targetId: varchar("target_id", { length: 36 }),
+	content: text().notNull(),
+	isRead: boolean("is_read").default(false).notNull(),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+	index("notifications_created_at_idx").using("btree", table.createdAt.asc().nullsLast().op("timestamptz_ops")),
+	index("notifications_is_read_idx").using("btree", table.isRead.asc().nullsLast().op("bool_ops")),
+	index("notifications_user_id_idx").using("btree", table.userId.asc().nullsLast().op("text_ops")),
+	foreignKey({
+			columns: [table.userId],
+			foreignColumns: [users.id],
+			name: "notifications_user_id_users_id_fk"
+		}),
+	foreignKey({
+			columns: [table.fromUserId],
+			foreignColumns: [users.id],
+			name: "notifications_from_user_id_users_id_fk"
+		}),
+]);
 
-// Notifications table
-export const notifications = pgTable(
-  "notifications",
-  {
-    id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
-    user_id: varchar("user_id", { length: 36 }).notNull().references(() => users.id),
-    type: varchar("type", { length: 20 }).notNull(),
-    from_user_id: varchar("from_user_id", { length: 36 }).references(() => users.id),
-    target_id: varchar("target_id", { length: 36 }),
-    content: text("content").notNull(),
-    is_read: boolean("is_read").default(false).notNull(),
-    created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  },
-  (table) => [
-    index("notifications_user_id_idx").on(table.user_id),
-    index("notifications_is_read_idx").on(table.is_read),
-    index("notifications_created_at_idx").on(table.created_at),
-  ]
-);
+export const mvs = pgTable("mvs", {
+	id: varchar({ length: 36 }).default(gen_random_uuid()).primaryKey().notNull(),
+	songId: varchar("song_id", { length: 36 }).notNull(),
+	storyboard: jsonb(),
+	style: varchar({ length: 50 }).default('realistic').notNull(),
+	aspectRatio: varchar("aspect_ratio", { length: 10 }).default('9:16').notNull(),
+	duration: integer().default(0).notNull(),
+	coverUrl: varchar("cover_url", { length: 500 }),
+	videoUrl: varchar("video_url", { length: 500 }),
+	status: varchar({ length: 20 }).default('pending').notNull(),
+	progress: integer().default(0).notNull(),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }),
+}, (table) => [
+	index("mvs_song_id_idx").using("btree", table.songId.asc().nullsLast().op("text_ops")),
+	index("mvs_status_idx").using("btree", table.status.asc().nullsLast().op("text_ops")),
+	foreignKey({
+			columns: [table.songId],
+			foreignColumns: [songs.id],
+			name: "mvs_song_id_songs_id_fk"
+		}),
+]);
 
-// MVs table (AI generated music videos)
-export const mvs = pgTable(
-  "mvs",
-  {
-    id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
-    song_id: varchar("song_id", { length: 36 }).notNull().references(() => songs.id),
-    storyboard: jsonb("storyboard"),
-    style: varchar("style", { length: 50 }).notNull().default("realistic"),
-    aspect_ratio: varchar("aspect_ratio", { length: 10 }).notNull().default("9:16"),
-    duration: integer("duration").default(0).notNull(),
-    cover_url: varchar("cover_url", { length: 500 }),
-    video_url: varchar("video_url", { length: 500 }),
-    status: varchar("status", { length: 20 }).notNull().default("pending"),
-    progress: integer("progress").default(0).notNull(),
-    created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-    updated_at: timestamp("updated_at", { withTimezone: true }),
-  },
-  (table) => [
-    index("mvs_song_id_idx").on(table.song_id),
-    index("mvs_status_idx").on(table.status),
-  ]
-);
+export const songs = pgTable("songs", {
+	id: varchar({ length: 36 }).default(gen_random_uuid()).primaryKey().notNull(),
+	title: varchar({ length: 200 }).notNull(),
+	artistId: varchar("artist_id", { length: 36 }).notNull(),
+	coverUrl: varchar("cover_url", { length: 500 }),
+	audioUrl: varchar("audio_url", { length: 500 }).notNull(),
+	lyrics: text(),
+	styleTags: jsonb("style_tags"),
+	description: text(),
+	duration: integer().default(0).notNull(),
+	playCount: integer("play_count").default(0).notNull(),
+	likeCount: integer("like_count").default(0).notNull(),
+	collectCount: integer("collect_count").default(0).notNull(),
+	commentCount: integer("comment_count").default(0).notNull(),
+	isPublished: boolean("is_published").default(true).notNull(),
+	isOriginal: boolean("is_original").default(true).notNull(),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }),
+	coverSource: varchar("cover_source", { length: 16 }).default('ai'),
+	language: varchar({ length: 16 }).default('zh'),
+	vocalType: varchar("vocal_type", { length: 16 }).default('female'),
+	mood: varchar({ length: 32 }),
+	isPublic: boolean("is_public").default(true).notNull(),
+}, (table) => [
+	index("songs_artist_id_idx").using("btree", table.artistId.asc().nullsLast().op("text_ops")),
+	index("songs_created_at_idx").using("btree", table.createdAt.asc().nullsLast().op("timestamptz_ops")),
+	index("songs_is_public_idx").using("btree", table.isPublic.asc().nullsLast().op("bool_ops")),
+	index("songs_is_published_idx").using("btree", table.isPublished.asc().nullsLast().op("bool_ops")),
+	index("songs_language_idx").using("btree", table.language.asc().nullsLast().op("text_ops")),
+	index("songs_like_count_idx").using("btree", table.likeCount.asc().nullsLast().op("int4_ops")),
+	index("songs_mood_idx").using("btree", table.mood.asc().nullsLast().op("text_ops")),
+	index("songs_play_count_idx").using("btree", table.playCount.asc().nullsLast().op("int4_ops")),
+	foreignKey({
+			columns: [table.artistId],
+			foreignColumns: [users.id],
+			name: "songs_artist_id_users_id_fk"
+		}),
+]);
 
-// Artists table (AI generated virtual artists)
-export const artists = pgTable(
-  "artists",
-  {
-    id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
-    user_id: varchar("user_id", { length: 36 }).references(() => users.id),
-    name: varchar("name", { length: 100 }).notNull(),
-    avatar_url: varchar("avatar_url", { length: 500 }),
-    slogan: varchar("slogan", { length: 200 }),
-    bio: text("bio"),
-    gender: varchar("gender", { length: 20 }),
-    age_group: varchar("age_group", { length: 20 }),
-    personality_tags: jsonb("personality_tags"),
-    style_tags: jsonb("style_tags"),
-    singing_techniques: jsonb("singing_techniques"),
-    language_preference: varchar("language_preference", { length: 20 }),
-    debut_date: varchar("debut_date", { length: 20 }),
-    region: varchar("region", { length: 50 }),
-    is_ai_generated: boolean("is_ai_generated").default(true).notNull(),
-    created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-    updated_at: timestamp("updated_at", { withTimezone: true }),
-  },
-  (table) => [
-    index("artists_user_id_idx").on(table.user_id),
-    index("artists_is_ai_generated_idx").on(table.is_ai_generated),
-  ]
-);
+// Drafts table for storing user's draft songs
+export const drafts = pgTable("drafts", {
+	id: varchar({ length: 36 }).default(gen_random_uuid()).primaryKey().notNull(),
+	userId: varchar("user_id", { length: 36 }).notNull(),
+	title: varchar({ length: 200 }).default('未命名作品').notNull(),
+	description: text(),
+	lyrics: text(),
+	styles: jsonb(),
+	singers: jsonb(),
+	audioUrl: varchar("audio_url", { length: 500 }),
+	coverUrl: varchar("cover_url", { length: 500 }),
+	provider: varchar({ length: 20 }),
+	modelVersion: varchar("model_version", { length: 50 }),
+	status: varchar({ length: 20 }).default('draft').notNull(), // draft, generating, completed, failed
+	errorMessage: text("error_message"),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }),
+}, (table) => [
+	index("drafts_user_id_idx").using("btree", table.userId.asc().nullsLast().op("text_ops")),
+	index("drafts_status_idx").using("btree", table.status.asc().nullsLast().op("text_ops")),
+	index("drafts_created_at_idx").using("btree", table.createdAt.asc().nullsLast().op("timestamptz_ops")),
+	foreignKey({
+			columns: [table.userId],
+			foreignColumns: [users.id],
+			name: "drafts_user_id_users_fk"
+	}),
+]);
+
+// User profiles table to link Supabase auth with app users
+export const userProfiles = pgTable("user_profiles", {
+	id: varchar({ length: 36 }).default(gen_random_uuid()).primaryKey().notNull(),
+	authUserId: varchar("auth_user_id", { length: 36 }).notNull(), // Supabase auth user ID
+	userId: varchar("user_id", { length: 36 }), // App users table ID
+	nickname: varchar({ length: 100 }),
+	avatar: varchar({ length: 500 }),
+	bio: text(),
+	credits: integer().default(10).notNull(),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }),
+}, (table) => [
+	uniqueIndex("user_profiles_auth_user_id_idx").using("btree", table.authUserId.asc().nullsLast().op("text_ops")),
+	index("user_profiles_user_id_idx").using("btree", table.userId.asc().nullsLast().op("text_ops")),
+]);
+
+// Messages table for private messaging between users
+export const messages = pgTable("messages", {
+	id: varchar({ length: 36 }).default(gen_random_uuid()).primaryKey().notNull(),
+	senderId: varchar("sender_id", { length: 36 }).notNull(),
+	receiverId: varchar("receiver_id", { length: 36 }).notNull(),
+	content: text().notNull(),
+	isRead: boolean("is_read").default(false).notNull(),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+	index("messages_sender_id_idx").using("btree", table.senderId.asc().nullsLast().op("text_ops")),
+	index("messages_receiver_id_idx").using("btree", table.receiverId.asc().nullsLast().op("text_ops")),
+	index("messages_created_at_idx").using("btree", table.createdAt.asc().nullsLast().op("timestamptz_ops")),
+]);

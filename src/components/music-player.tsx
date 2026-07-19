@@ -73,7 +73,8 @@ export function MusicPlayer({ audioUrl, candidates, title, provider, isGeneratin
       : [];
 
   const currentCandidate = effectiveCandidates[currentIdx];
-  const currentUrl = currentCandidate?.url;
+  // Prefer high quality URL for playback to avoid noise/compression artifacts
+  const currentUrl = currentCandidate?.hqUrl || currentCandidate?.url;
   const hasMultiple = effectiveCandidates.length > 1;
 
   // Switch track
@@ -91,6 +92,7 @@ export function MusicPlayer({ audioUrl, candidates, title, provider, isGeneratin
     wavesurferRef.current?.destroy();
 
     // Initialize WaveSurfer
+    // Use MediaElement backend to avoid Web Audio API sample rate issues that can cause noise
     wavesurferRef.current = WaveSurfer.create({
       container: waveformRef.current,
       waveColor: 'rgba(139, 92, 246, 0.5)',
@@ -101,6 +103,7 @@ export function MusicPlayer({ audioUrl, candidates, title, provider, isGeneratin
       barGap: 1,
       height: 80,
       normalize: true,
+      backend: 'MediaElement', // Use HTML5 Audio backend to avoid Web Audio API noise issues
     });
 
     wavesurferRef.current.load(currentUrl);
@@ -249,6 +252,8 @@ export function MusicPlayer({ audioUrl, candidates, title, provider, isGeneratin
         <h3 className="text-lg font-semibold flex items-center gap-2">
           <span className="text-primary">🎵</span>
           音乐播放
+          <span className="px-1.5 py-0.5 text-[10px] bg-primary/20 text-primary rounded font-medium">Hi-Fi</span>
+          <span className="px-1.5 py-0.5 text-[10px] bg-white/10 text-muted-foreground rounded">立体声</span>
         </h3>
         {/* Candidate switcher */}
         {hasMultiple && (

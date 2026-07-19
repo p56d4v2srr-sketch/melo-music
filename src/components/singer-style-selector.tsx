@@ -87,9 +87,9 @@ export function SingerStyleSelector({ selectedSingers, onSelectionChange }: Sing
 
       {/* Singer List */}
       <div className="space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar">
-        {filteredSingers.map((singer) => (
+        {filteredSingers.map((singer, index) => (
           <SingerCard
-            key={`${singer.region}-${singer.id}`}
+            key={`${singer.region}-${singer.id}-${index}`}
             singer={singer}
             isSelected={selectedSingers.includes(singer.id)}
             onToggle={() => toggleSinger(singer.id)}

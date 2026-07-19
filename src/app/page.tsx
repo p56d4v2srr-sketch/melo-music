@@ -2,8 +2,9 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Navbar } from '@/components/navbar';
-import { mockSongsWithArtists, formatCount, formatDuration, type MockSong } from '@/lib/mock-data';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import {
   Play,
   Pause,
@@ -14,22 +15,102 @@ import {
   ChevronUp,
   ChevronDown,
   Music,
+  Filter,
+  X,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/lib/auth-context';
+import { shareSong } from '@/lib/share';
+
+interface FeedSong {
+  id: string;
+  title: string;
+  audioUrl: string;
+  coverUrl: string | null;
+  duration: number | null;
+  playCount: number;
+  likeCount: number;
+  collectCount: number;
+  commentCount: number;
+  genre: string | null;
+  tags: string[] | null;
+  createdAt: string;
+  userId: string | null;
+  userNickname: string | null;
+  userAvatar: string | null;
+  isLiked?: boolean;
+  isCollected?: boolean;
+}
 
 export default function DiscoverPage() {
+  const { user } = useAuth();
+  const [songs, setSongs] = useState<FeedSong[]>([]);
+  const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [likedSongs, setLikedSongs] = useState<Set<string>>(new Set());
-  const [collectedSongs, setCollectedSongs] = useState<Set<string>>(new Set());
   const [direction, setDirection] = useState(0);
+  const [showFilter, setShowFilter] = useState(false);
+  const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
+  const [commentText, setCommentText] = useState('');
+  const [showComments, setShowComments] = useState(false);
+  
   const containerRef = useRef<HTMLDivElement>(null);
   const touchStartY = useRef(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const songs = mockSongsWithArtists;
   const currentSong = songs[currentIndex];
+
+  // 获取信息流
+  const fetchFeed = useCallback(async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams();
+      if (selectedGenre) params.set('genre', selectedGenre);
+      
+      const res = await fetch(`/api/feed?${params}`);
+      const data = await res.json();
+      
+      if (data.success) {
+        setSongs(data.data.songs || []);
+      }
+    } catch (error) {
+      console.error('获取信息流失败:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedGenre]);
+
+  useEffect(() => {
+    fetchFeed();
+  }, [fetchFeed]);
+
+  // 检查点赞/收藏状态
+  useEffect(() => {
+    if (!user || !currentSong) return;
+    
+    const checkStatus = async () => {
+      try {
+        const [likeRes, collectRes] = await Promise.all([
+          fetch(`/api/interactions/like?songId=${currentSong.id}&userId=${user.id}`),
+          fetch(`/api/interactions/collect?songId=${currentSong.id}&userId=${user.id}`),
+        ]);
+        
+        const likeData = await likeRes.json();
+        const collectData = await collectRes.json();
+        
+        setSongs(prev => prev.map((song, idx) => 
+          idx === currentIndex 
+            ? { ...song, isLiked: likeData.data?.liked, isCollected: collectData.data?.collected }
+            : song
+        ));
+      } catch (error) {
+        console.error('检查状态失败:', error);
+      }
+    };
+    
+    checkStatus();
+  }, [currentIndex, currentSong, user]);
 
   const goNext = useCallback(() => {
     if (currentIndex < songs.length - 1) {
@@ -50,11 +131,8 @@ export default function DiscoverPage() {
   const handleWheel = useCallback(
     (e: WheelEvent) => {
       e.preventDefault();
-      if (e.deltaY > 30) {
-        goNext();
-      } else if (e.deltaY < -30) {
-        goPrev();
-      }
+      if (e.deltaY > 30) goNext();
+      else if (e.deltaY < -30) goPrev();
     },
     [goNext, goPrev]
   );
@@ -65,26 +143,9 @@ export default function DiscoverPage() {
 
   const handleTouchEnd = useCallback(
     (e: TouchEvent) => {
-      const touchEndY = e.changedTouches[0].clientY;
-      const diff = touchStartY.current - touchEndY;
-      if (diff > 50) {
-        goNext();
-      } else if (diff < -50) {
-        goPrev();
-      }
-    },
-    [goNext, goPrev]
-  );
-
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === 'ArrowDown' || e.key === ' ') {
-        e.preventDefault();
-        goNext();
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        goPrev();
-      }
+      const diff = touchStartY.current - e.changedTouches[0].clientY;
+      if (diff > 50) goNext();
+      else if (diff < -50) goPrev();
     },
     [goNext, goPrev]
   );
@@ -96,295 +157,417 @@ export default function DiscoverPage() {
     container.addEventListener('wheel', handleWheel, { passive: false });
     container.addEventListener('touchstart', handleTouchStart, { passive: true });
     container.addEventListener('touchend', handleTouchEnd, { passive: true });
-    window.addEventListener('keydown', handleKeyDown);
 
     return () => {
       container.removeEventListener('wheel', handleWheel);
       container.removeEventListener('touchstart', handleTouchStart);
       container.removeEventListener('touchend', handleTouchEnd);
-      window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [handleWheel, handleTouchStart, handleTouchEnd, handleKeyDown]);
+  }, [handleWheel, handleTouchStart, handleTouchEnd]);
 
-  const toggleLike = () => {
-    const songId = currentSong.id;
-    setLikedSongs((prev) => {
-      const next = new Set(prev);
-      if (next.has(songId)) {
-        next.delete(songId);
-      } else {
-        next.add(songId);
+  useEffect(() => {
+    if (audioRef.current) {
+      if (isPlaying) audioRef.current.play().catch(() => {});
+      else audioRef.current.pause();
+    }
+  }, [isPlaying, currentIndex]);
+
+  const togglePlay = () => setIsPlaying(!isPlaying);
+
+  const handleLike = async () => {
+    if (!user || !currentSong) {
+      alert('请先登录');
+      return;
+    }
+    
+    try {
+      const res = await fetch('/api/interactions/like', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ songId: currentSong.id, userId: user.id }),
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+        setSongs(prev => prev.map((song, idx) => 
+          idx === currentIndex 
+            ? { 
+                ...song, 
+                isLiked: data.data.liked,
+                likeCount: data.data.liked ? song.likeCount + 1 : song.likeCount - 1
+              }
+            : song
+        ));
       }
-      return next;
-    });
+    } catch (error) {
+      console.error('点赞失败:', error);
+    }
   };
 
-  const toggleCollect = () => {
-    const songId = currentSong.id;
-    setCollectedSongs((prev) => {
-      const next = new Set(prev);
-      if (next.has(songId)) {
-        next.delete(songId);
-      } else {
-        next.add(songId);
+  const handleCollect = async () => {
+    if (!user || !currentSong) {
+      alert('请先登录');
+      return;
+    }
+    
+    try {
+      const res = await fetch('/api/interactions/collect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ songId: currentSong.id, userId: user.id }),
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+        setSongs(prev => prev.map((song, idx) => 
+          idx === currentIndex 
+            ? { 
+                ...song, 
+                isCollected: data.data.collected,
+                collectCount: data.data.collected ? song.collectCount + 1 : song.collectCount - 1
+              }
+            : song
+        ));
       }
-      return next;
-    });
+    } catch (error) {
+      console.error('收藏失败:', error);
+    }
   };
 
-  const togglePlay = () => {
-    setIsPlaying(!isPlaying);
+  const handleComment = async () => {
+    if (!user || !currentSong || !commentText.trim()) return;
+    
+    try {
+      const res = await fetch('/api/interactions/comment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          songId: currentSong.id, 
+          userId: user.id, 
+          content: commentText 
+        }),
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+        setSongs(prev => prev.map((song, idx) => 
+          idx === currentIndex 
+            ? { ...song, commentCount: song.commentCount + 1 }
+            : song
+        ));
+        setCommentText('');
+      }
+    } catch (error) {
+      console.error('评论失败:', error);
+    }
   };
 
-  // Parse current lyrics line
-  const getCurrentLyricLine = () => {
-    if (!currentSong.lyrics) return '';
-    const lines = currentSong.lyrics.split('\n').filter((l) => l.trim() && !l.startsWith('['));
-    return lines[0] || '';
+  const handleShare = () => {
+    if (currentSong) {
+      shareSong({
+        id: currentSong.id,
+        title: currentSong.title,
+        coverUrl: currentSong.coverUrl || undefined,
+      });
+    }
   };
+
+  const formatCount = (count: number) => {
+    if (count >= 10000) return (count / 10000).toFixed(1) + 'w';
+    if (count >= 1000) return (count / 1000).toFixed(1) + 'k';
+    return count.toString();
+  };
+
+  const genres = ['流行', '摇滚', '电子', '嘻哈', 'R&B', '爵士', '古典', '民谣', '乡村', '金属'];
+
+  if (loading) {
+    return (
+      <>
+        <Navbar />
+        <div className="min-h-screen bg-gradient-to-br from-[#0a0a0f] via-[#1a1a2e] to-[#0f3460] flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-[#d4af37] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-white/60">加载中...</p>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  if (songs.length === 0) {
+    return (
+      <>
+        <Navbar />
+        <div className="min-h-screen bg-gradient-to-br from-[#0a0a0f] via-[#1a1a2e] to-[#0f3460] flex items-center justify-center">
+          <div className="text-center">
+            <Music className="w-16 h-16 text-[#d4af37]/50 mx-auto mb-4" />
+            <h2 className="text-xl text-white mb-2">暂无作品</h2>
+            <p className="text-white/60 mb-4">还没有人发布歌曲，快去创作第一首吧！</p>
+            <Button onClick={() => window.location.href = '/create'} className="bg-gradient-to-r from-[#d4af37] to-[#f59e0b]">
+              去创作
+            </Button>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   return (
-    <div className="h-screen bg-background overflow-hidden">
+    <>
       <Navbar />
-
-      <div ref={containerRef} className="relative h-full w-full pt-16">
-        <AnimatePresence mode="wait" custom={direction}>
-          <motion.div
-            key={currentSong.id}
-            custom={direction}
-            initial={{
-              y: direction > 0 ? '100%' : '-100%',
-              opacity: 0,
-            }}
-            animate={{
-              y: 0,
-              opacity: 1,
-            }}
-            exit={{
-              y: direction > 0 ? '-100%' : '100%',
-              opacity: 0,
-            }}
-            transition={{
-              type: 'spring',
-              stiffness: 300,
-              damping: 30,
-            }}
-            className="absolute inset-0 flex items-center justify-center"
+      <div className="min-h-screen bg-gradient-to-br from-[#0a0a0f] via-[#1a1a2e] to-[#0f3460] relative">
+        {/* 筛选按钮 */}
+        <div className="fixed top-20 left-4 z-40">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowFilter(!showFilter)}
+            className="bg-black/50 border-white/20 text-white backdrop-blur-sm"
           >
-            {/* Background with blur */}
-            <div className="absolute inset-0">
-              <div
-                className="absolute inset-0 bg-cover bg-center scale-110 blur-3xl opacity-30"
-                style={{ backgroundImage: `url(${currentSong.cover_url})` }}
-              />
-              <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/80 to-background" />
-            </div>
+            <Filter className="w-4 h-4 mr-1" />
+            筛选
+          </Button>
+        </div>
 
-            {/* Main Content */}
-            <div className="relative z-10 flex items-center justify-center w-full h-full px-4">
-              <div className="flex flex-col lg:flex-row items-center gap-8 lg:gap-16 max-w-6xl w-full">
-                {/* Cover Art */}
-                <div className="relative group">
-                  <div className="w-64 h-64 sm:w-80 sm:h-80 lg:w-96 lg:h-96 rounded-2xl overflow-hidden shadow-2xl shadow-primary/20">
-                    <img
-                      src={currentSong.cover_url}
-                      alt={currentSong.title}
-                      className="w-full h-full object-cover"
-                    />
-                    {/* Play overlay */}
-                    <div
-                      className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                      onClick={togglePlay}
-                    >
-                      <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                        {isPlaying ? (
-                          <Pause className="w-8 h-8 text-white" />
-                        ) : (
-                          <Play className="w-8 h-8 text-white ml-1" />
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Wave animation */}
-                  {isPlaying && (
-                    <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 flex items-end gap-1 h-8">
-                      {Array.from({ length: 20 }).map((_, i) => (
-                        <div
-                          key={i}
-                          className="w-1 bg-gradient-to-t from-primary to-accent rounded-full wave-animation"
-                          style={{
-                            height: `${20 + Math.sin(i * 0.5) * 30 + 30}%`,
-                            animationDelay: `${i * 0.05}s`,
-                          }}
-                        />
-                      ))}
-                    </div>
+        {/* 筛选面板 */}
+        <AnimatePresence>
+          {showFilter && (
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="fixed top-32 left-4 z-40 bg-black/80 backdrop-blur-lg rounded-xl p-4 border border-white/10"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-white font-medium">风格筛选</h3>
+                <Button variant="ghost" size="sm" onClick={() => setShowFilter(false)}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-2 max-w-[200px]">
+                <Badge
+                  variant={selectedGenre === null ? 'default' : 'outline'}
+                  className={cn(
+                    'cursor-pointer',
+                    selectedGenre === null ? 'bg-[#d4af37]' : 'border-white/20 text-white/60'
                   )}
-                </div>
-
-                {/* Song Info */}
-                <div className="flex-1 text-center lg:text-left max-w-lg">
-                  <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gradient-gold mb-4">
-                    {currentSong.title}
-                  </h1>
-
-                  {/* Artist */}
-                  <div className="flex items-center gap-3 justify-center lg:justify-start mb-6">
-                    <img
-                      src={currentSong.artist?.avatar}
-                      alt={currentSong.artist?.nickname}
-                      className="w-10 h-10 rounded-full border-2 border-primary/50"
-                    />
-                    <div>
-                      <p className="text-foreground font-medium">{currentSong.artist?.nickname}</p>
-                      <p className="text-sm text-muted-foreground">{currentSong.artist?.slogan}</p>
-                    </div>
-                  </div>
-
-                  {/* Style Tags */}
-                  <div className="flex flex-wrap gap-2 justify-center lg:justify-start mb-6">
-                    {currentSong.style_tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="px-3 py-1 text-xs rounded-full bg-white/5 border border-white/10 text-muted-foreground"
-                      >
-                        #{tag}
-                      </span>
-                    ))}
-                  </div>
-
-                  {/* Description */}
-                  <p className="text-muted-foreground mb-6 text-sm leading-relaxed">
-                    {currentSong.description}
-                  </p>
-
-                  {/* Current Lyric Line */}
-                  <div className="glass-card p-4 rounded-xl mb-6">
-                    <p className="text-foreground italic text-center">&quot;{getCurrentLyricLine()}&quot;</p>
-                  </div>
-
-                  {/* Stats */}
-                  <div className="flex items-center gap-6 justify-center lg:justify-start text-sm text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <Play className="w-4 h-4" />
-                      {formatCount(currentSong.play_count)}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Heart className="w-4 h-4" />
-                      {formatCount(currentSong.like_count)}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <MessageCircle className="w-4 h-4" />
-                      {formatCount(currentSong.comment_count)}
-                    </span>
-                    <span>{formatDuration(currentSong.duration)}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Side Actions */}
-            <div className="absolute right-4 sm:right-8 top-1/2 -translate-y-1/2 flex flex-col gap-6 z-20">
-              <ActionButton
-                icon={Heart}
-                count={currentSong.like_count + (likedSongs.has(currentSong.id) ? 1 : 0)}
-                isActive={likedSongs.has(currentSong.id)}
-                activeColor="text-red-500"
-                onClick={toggleLike}
-                label="点赞"
-              />
-              <ActionButton
-                icon={MessageCircle}
-                count={currentSong.comment_count}
-                onClick={() => {}}
-                label="评论"
-              />
-              <ActionButton
-                icon={Star}
-                count={currentSong.collect_count + (collectedSongs.has(currentSong.id) ? 1 : 0)}
-                isActive={collectedSongs.has(currentSong.id)}
-                activeColor="text-yellow-500"
-                onClick={toggleCollect}
-                label="收藏"
-              />
-              <ActionButton icon={Share2} onClick={() => {}} label="分享" />
-            </div>
-
-            {/* Bottom Navigation Hints */}
-            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 z-20">
-              {currentIndex > 0 && (
-                <button
-                  onClick={goPrev}
-                  className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
+                  onClick={() => setSelectedGenre(null)}
                 >
-                  <ChevronUp className="w-5 h-5 text-muted-foreground" />
-                </button>
-              )}
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Music className="w-3 h-3" />
-                <span>
-                  {currentIndex + 1} / {songs.length}
-                </span>
+                  全部
+                </Badge>
+                {genres.map(genre => (
+                  <Badge
+                    key={genre}
+                    variant={selectedGenre === genre ? 'default' : 'outline'}
+                    className={cn(
+                      'cursor-pointer',
+                      selectedGenre === genre ? 'bg-[#d4af37]' : 'border-white/20 text-white/60'
+                    )}
+                    onClick={() => setSelectedGenre(genre === selectedGenre ? null : genre)}
+                  >
+                    {genre}
+                  </Badge>
+                ))}
               </div>
-              {currentIndex < songs.length - 1 && (
-                <button
-                  onClick={goNext}
-                  className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
-                >
-                  <ChevronDown className="w-5 h-5 text-muted-foreground" />
-                </button>
-              )}
-            </div>
-          </motion.div>
+            </motion.div>
+          )}
         </AnimatePresence>
 
-        {/* Hidden audio element */}
-        <audio ref={audioRef} src={currentSong.audio_url} />
-      </div>
-    </div>
-  );
-}
+        {/* 歌曲卡片容器 */}
+        <div
+          ref={containerRef}
+          className="h-screen w-full overflow-hidden relative flex items-center justify-center"
+        >
+          <AnimatePresence mode="wait" custom={direction}>
+            <motion.div
+              key={currentIndex}
+              custom={direction}
+              initial={{ y: direction > 0 ? '100%' : '-100%', opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: direction > 0 ? '-100%' : '100%', opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              className="absolute inset-0 flex items-center justify-center p-4"
+            >
+              {currentSong && (
+                <div className="max-w-4xl w-full mx-auto grid md:grid-cols-2 gap-8 items-center">
+                  {/* 封面 */}
+                  <div className="relative aspect-square rounded-2xl overflow-hidden shadow-2xl">
+                    {currentSong.coverUrl ? (
+                      <img src={currentSong.coverUrl} alt={currentSong.title} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-[#d4af37]/20 to-[#8b5cf6]/20 flex items-center justify-center">
+                        <Music className="w-24 h-24 text-[#d4af37]/50" />
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                    
+                    {/* 播放按钮 */}
+                    <button
+                      onClick={togglePlay}
+                      className="absolute inset-0 flex items-center justify-center"
+                    >
+                      <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center hover:bg-white/30 transition-all">
+                        {isPlaying ? (
+                          <Pause className="w-8 h-8 text-white" fill="white" />
+                        ) : (
+                          <Play className="w-8 h-8 text-white ml-1" fill="white" />
+                        )}
+                      </div>
+                    </button>
 
-function ActionButton({
-  icon: Icon,
-  count,
-  isActive,
-  activeColor,
-  onClick,
-  label,
-}: {
-  icon: React.ComponentType<{ className?: string; fill?: string }>;
-  count?: number;
-  isActive?: boolean;
-  activeColor?: string;
-  onClick: () => void;
-  label: string;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className="flex flex-col items-center gap-1 group"
-      title={label}
-    >
-      <div
-        className={cn(
-          'w-12 h-12 rounded-full glass-card flex items-center justify-center transition-all duration-200',
-          'hover:scale-110 hover:bg-white/10',
-          isActive && 'glow-gold'
-        )}
-      >
-        <Icon
-          className={cn(
-            'w-5 h-5 transition-colors',
-            isActive ? activeColor || 'text-primary' : 'text-muted-foreground group-hover:text-foreground'
+                    {/* 音频 */}
+                    {currentSong.audioUrl && (
+                      <audio
+                        ref={audioRef}
+                        src={currentSong.audioUrl}
+                        onEnded={() => setIsPlaying(false)}
+                      />
+                    )}
+                  </div>
+
+                  {/* 信息 */}
+                  <div className="space-y-4">
+                    {/* 用户信息 */}
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#d4af37] to-[#f59e0b] flex items-center justify-center text-white font-bold">
+                        {currentSong.userAvatar ? (
+                          <img src={currentSong.userAvatar} className="w-full h-full rounded-full object-cover" />
+                        ) : (
+                          currentSong.userNickname?.[0] || '?'
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-white font-medium">{currentSong.userNickname || '匿名'}</p>
+                        <p className="text-white/40 text-xs">
+                          {new Date(currentSong.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* 歌曲信息 */}
+                    <div>
+                      <h1 className="text-3xl font-bold text-white mb-2">{currentSong.title}</h1>
+                      {currentSong.genre && (
+                        <Badge className="bg-[#d4af37]/20 text-[#d4af37] border-[#d4af37]/30">
+                          {currentSong.genre}
+                        </Badge>
+                      )}
+                    </div>
+
+                    {/* 标签 */}
+                    {currentSong.tags && currentSong.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {currentSong.tags.map(tag => (
+                          <Badge key={tag} variant="outline" className="border-white/20 text-white/60">
+                            #{tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* 互动按钮 */}
+                    <div className="flex items-center gap-6 pt-4">
+                      <button
+                        onClick={handleLike}
+                        className={cn(
+                          'flex flex-col items-center gap-1 transition-all',
+                          currentSong.isLiked ? 'text-red-500' : 'text-white/60 hover:text-white'
+                        )}
+                      >
+                        <Heart className={cn('w-6 h-6', currentSong.isLiked && 'fill-current')} />
+                        <span className="text-xs">{formatCount(currentSong.likeCount)}</span>
+                      </button>
+
+                      <button
+                        onClick={() => setShowComments(!showComments)}
+                        className="flex flex-col items-center gap-1 text-white/60 hover:text-white transition-all"
+                      >
+                        <MessageCircle className="w-6 h-6" />
+                        <span className="text-xs">{formatCount(currentSong.commentCount)}</span>
+                      </button>
+
+                      <button
+                        onClick={handleCollect}
+                        className={cn(
+                          'flex flex-col items-center gap-1 transition-all',
+                          currentSong.isCollected ? 'text-[#d4af37]' : 'text-white/60 hover:text-white'
+                        )}
+                      >
+                        <Star className={cn('w-6 h-6', currentSong.isCollected && 'fill-current')} />
+                        <span className="text-xs">{formatCount(currentSong.collectCount)}</span>
+                      </button>
+
+                      <button
+                        onClick={handleShare}
+                        className="flex flex-col items-center gap-1 text-white/60 hover:text-white transition-all"
+                      >
+                        <Share2 className="w-6 h-6" />
+                        <span className="text-xs">分享</span>
+                      </button>
+                    </div>
+
+                    {/* 播放量 */}
+                    <div className="flex items-center gap-2 text-white/40 text-sm pt-2">
+                      <Play className="w-4 h-4" />
+                      <span>{formatCount(currentSong.playCount)} 次播放</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          </AnimatePresence>
+
+          {/* 导航提示 */}
+          <div className="fixed bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-white/40">
+            {currentIndex > 0 && <ChevronUp className="w-6 h-6 animate-bounce" />}
+            <span className="text-xs">滑动切换</span>
+            {currentIndex < songs.length - 1 && <ChevronDown className="w-6 h-6 animate-bounce" />}
+          </div>
+
+          {/* 进度指示 */}
+          <div className="fixed right-4 top-1/2 -translate-y-1/2 flex flex-col gap-1">
+            {songs.map((_, idx) => (
+              <div
+                key={idx}
+                className={cn(
+                  'w-1 h-6 rounded-full transition-all',
+                  idx === currentIndex ? 'bg-[#d4af37] h-8' : 'bg-white/20'
+                )}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* 评论面板 */}
+        <AnimatePresence>
+          {showComments && currentSong && (
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              className="fixed bottom-0 left-0 right-0 h-[60vh] bg-black/95 backdrop-blur-lg rounded-t-2xl border-t border-white/10 z-50"
+            >
+              <div className="p-4 border-b border-white/10 flex items-center justify-between">
+                <h3 className="text-white font-medium">评论 ({currentSong.commentCount})</h3>
+                <Button variant="ghost" size="sm" onClick={() => setShowComments(false)}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+              <div className="p-4 flex gap-2">
+                <Input
+                  value={commentText}
+                  onChange={(e) => setCommentText(e.target.value)}
+                  placeholder="写下你的评论..."
+                  className="bg-white/5 border-white/10 text-white"
+                />
+                <Button onClick={handleComment} className="bg-[#d4af37] hover:bg-[#d4af37]/80">
+                  发送
+                </Button>
+              </div>
+            </motion.div>
           )}
-          fill={isActive ? 'currentColor' : 'none'}
-        />
+        </AnimatePresence>
       </div>
-      {count !== undefined && (
-        <span className="text-xs text-muted-foreground">{formatCount(count)}</span>
-      )}
-    </button>
+    </>
   );
 }

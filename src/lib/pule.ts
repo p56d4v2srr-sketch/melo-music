@@ -145,6 +145,10 @@ export async function generatePule(params: PuleGenerateParams): Promise<PuleGene
   // V5.8: 使用实测有效的 model 字面串
   body.model = params.model || 'TemPolor v4.5';
 
+  // 最高音质输出
+  body.quality = 'studio';
+  body.audio_format = 'wav';
+
   // PuLe API 要求必须传 lyrics，即使是 instrumental 模式
   // instrumental 模式下用 [Instrumental] 占位
   if (params.instrumental) {

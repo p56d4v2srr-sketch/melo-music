@@ -152,9 +152,9 @@ export function ArtistLibraryDrawer({
             <div>
               <h3 className="text-sm font-medium text-white/70 mb-3">{activeCategory}</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {filteredArtists.map(a => (
+                {filteredArtists.map((a, index) => (
                   <ArtistCard
-                    key={`${a.id}-${a.category}`}
+                    key={`${a.id}-${a.category}-${index}`}
                     artist={a}
                     selected={selectedArtistIds.includes(a.id)}
                     disabled={!selectedArtistIds.includes(a.id) && selectedArtistIds.length >= maxSelect}
@@ -192,9 +192,9 @@ export function ArtistLibraryDrawer({
                       </button>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {catArtists.slice(0, 6).map(a => (
+                      {catArtists.slice(0, 6).map((a, index) => (
                         <ArtistCard
-                          key={`${a.id}-${a.category}`}
+                          key={`${a.id}-${a.category}-${index}`}
                           artist={a}
                           selected={selectedArtistIds.includes(a.id)}
                           disabled={!selectedArtistIds.includes(a.id) && selectedArtistIds.length >= maxSelect}

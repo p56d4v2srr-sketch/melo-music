@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
+import Link from 'next/link';
 import { toast } from 'sonner';
 import { Navbar } from '@/components/navbar';
 import { MusicStyleSelector } from '@/components/music-style-selector';
@@ -22,13 +23,17 @@ import { VocalWeightSliders, weightsToPrompt, type VocalWeights } from '@/compon
 import { ModelAdvancedOptions } from '@/components/model-advanced-options';
 import { GENRES } from '@/data/genres';
 import { ARTISTS, getArtistById } from '@/data/artists';
+import { getUserCredits, checkCredits, getCreditsCost, CREDIT_COSTS, type UserCredits } from '@/lib/credits';
+import { useAuth } from '@/lib/auth-context';
+import { SingerWallpaper } from '@/components/singer-wallpaper';
+import { useWallpaper } from '@/hooks/use-wallpaper';
 
 // Provider tab 定义（顶层切换）
 const PROVIDER_TABS = [
-  { key: 'minimax', name: 'MiniMax · 快', subtitle: '~2min · 免费 · music-2.5', enabled: true },
-  { key: 'pule', name: 'PuLe · 精品', subtitle: '~90s · ¥0.3/首 · 5min · 时间戳歌词', enabled: true },
-  { key: 'suno', name: 'Suno · 全球 v5.5', subtitle: '~60-90s · 2 首供选 · 流式播放 · 内核覆盖中外全曲风元素', enabled: true },
-  { key: 'lconai', name: '智创聚合', subtitle: 'Suno V3.5/V4/V5 · 独立通道', enabled: true },
+  { key: 'minimax', name: 'MiniMax · 快', subtitle: '~2min · 1-3积分/次 · music-2.5', enabled: true },
+  { key: 'pule', name: 'PuLe · 精品', subtitle: '~90s · 免费 · 5min · 时间戳歌词', enabled: true },
+  { key: 'suno', name: 'Suno · 全球 v5.5', subtitle: '~60-90s · 1-5积分/2首 · 流式播放', enabled: true },
+  { key: 'lconai', name: '智创聚合', subtitle: '1-5积分/2首 · Suno V3.5/V4/V5', enabled: true },
 ];
 
 // 模型系列 tab 定义
@@ -44,30 +49,59 @@ const MODEL_TABS = [
 import { SUNO_VERSIONS as SUNO_VERSION_DATA, DEFAULT_SUNO_VERSION, MAX_TIMBRE_CHIP_SELECTED, PULE_MODEL, LCONAI_VERSIONS as LCONAI_VERSION_DATA, DEFAULT_LCONAI_VERSION } from '@/lib/constants';
 import { VOCAL_TIMBRES } from '@/data/vocal-timbres';
 
-const SUNO_VERSIONS = SUNO_VERSION_DATA.map(v => ({
-  key: v.value,
-  name: v.label,
-  desc: v.desc,
-  credits: '5 积分 / 2 首',
-  badge: v.value === DEFAULT_SUNO_VERSION ? '默认' : null,
-}));
+const SUNO_VERSIONS = SUNO_VERSION_DATA.map(v => {
+  // 根据版本设置积分
+  const creditMap: Record<string, number> = {
+    'chirp-v3-5': 1,
+    'chirp-v4': 1,
+    'chirp-v4-5': 2,
+    'chirp-v5': 3,
+    'chirp-v5-5': 5,
+  };
+  const credits = creditMap[v.value] ?? 1;
+  return {
+    key: v.value,
+    name: v.label,
+    desc: v.desc,
+    credits: `${credits} 积分 / 2 首`,
+    badge: v.value === DEFAULT_SUNO_VERSION ? '默认' : null,
+  };
+});
 
 // LCONAI (智创聚合) 版本定义
-const LCONAI_VERSIONS = LCONAI_VERSION_DATA.map(v => ({
-  key: v.value,
-  name: v.label,
-  desc: v.desc,
-  credits: '按量计费',
-  badge: v.value === DEFAULT_LCONAI_VERSION ? '默认' : null,
-}));
+const LCONAI_VERSIONS = LCONAI_VERSION_DATA.map(v => {
+  // 智创聚合与对应 Suno 版本同价
+  const creditMap: Record<string, number> = {
+    'chirp-v3-5': 1,
+    'chirp-v4': 1,
+    'chirp-v4-5': 2,
+    'chirp-v5': 3,
+    'chirp-v5-5': 5,
+  };
+  const credits = creditMap[v.value] ?? 1;
+  return {
+    key: v.value,
+    name: v.label,
+    desc: v.desc,
+    credits: `${credits} 积分 / 2 首`,
+    badge: v.value === DEFAULT_LCONAI_VERSION ? '默认' : null,
+  };
+});
 
 // MiniMax 版本定义
 const MINIMAX_VERSIONS = [
-  { key: 'music-2.0', name: 'MiniMax music-2.0', desc: '经典款 · ~18s · 同步WAV无损', credits: '免费', badge: null },
-  { key: 'music-2.5', name: 'MiniMax music-2.5', desc: '最新版 · ~2min · 同步WAV无损 · 推荐', credits: '免费', badge: '推荐' },
+  { key: 'music-2.0', name: 'MiniMax music-2.0', desc: '经典款 · ~18s · 同步WAV无损', credits: '1 积分 / 次', badge: null },
+  { key: 'music-2.5', name: 'MiniMax music-2.5', desc: '最新版 · ~2min · 同步WAV无损 · 推荐', credits: '3 积分 / 次', badge: '推荐' },
 ];
 
 export default function CreatePage() {
+  // ========== Auth ==========
+  const { user, session } = useAuth();
+
+  // ========== Wallpaper ==========
+  const { currentPhoto, fade } = useWallpaper({});
+  const imageUrl = currentPhoto?.url || '';
+
   // ========== Provider state (useToggleSelection) ==========
   const provider = useToggleSelection<'minimax' | 'pule' | 'suno' | 'lconai'>();
   
@@ -142,6 +176,7 @@ export default function CreatePage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
   const [generatedAudioUrl, setGeneratedAudioUrl] = useState<string>();
+  const [publishStatus, setPublishStatus] = useState<'idle' | 'publishing' | 'drafting'>('idle');
   const [lyricsAnalysis, setLyricsAnalysis] = useState<SanitizeResult>({
     cleaned: '',
     bracketTags: [],
@@ -197,6 +232,25 @@ export default function CreatePage() {
   }>>([]);
   const [pulePollingStatus, setPulePollingStatus] = useState<'idle' | 'submitted' | 'polling' | 'succeeded' | 'failed'>('idle');
   const [pulePollingMessage, setPulePollingMessage] = useState('');
+
+  // Credit system state
+  const [userCredits, setUserCredits] = useState<UserCredits | null>(null);
+
+  // Load credits on mount
+  useEffect(() => {
+    setUserCredits(getUserCredits());
+  }, []);
+
+  // Refresh credits display
+  const refreshCreditsBalance = () => {
+    setUserCredits(getUserCredits());
+  };
+
+  // Current provider's credit cost
+  const currentCreditCost = useMemo(() => {
+    if (!provider.value) return 0;
+    return getCreditsCost(provider.value);
+  }, [provider.value]);
 
   // Auto-analyze lyrics when they change
   useEffect(() => {
@@ -404,6 +458,91 @@ export default function CreatePage() {
     provider.toggle(tabKey as 'minimax' | 'pule' | 'suno');
   };
 
+  // Publish song to public feed
+  const handlePublish = async () => {
+    if (!generatedAudioUrl) {
+      toast.error('请先生成音乐');
+      return;
+    }
+    if (!user) {
+      toast.error('请先登录', { description: '登录后才能发布作品' });
+      return;
+    }
+    setPublishStatus('publishing');
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+      const res = await fetch('/api/songs/publish', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          title: songTitle || '未命名作品',
+          audioUrl: generatedAudioUrl,
+          coverUrl: null,
+          genre: selectedStyles[0] || null,
+          tags: selectedStyles.length > 0 ? selectedStyles : null,
+          lyrics: lyrics || null,
+          duration: null,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('发布成功', { description: '作品已发布到发现页' });
+      } else {
+        toast.error('发布失败', { description: data.error });
+      }
+    } catch {
+      toast.error('发布失败', { description: '网络异常，请重试' });
+    } finally {
+      setPublishStatus('idle');
+    }
+  };
+
+  // Save song as draft
+  const handleSaveDraft = async () => {
+    if (!generatedAudioUrl) {
+      toast.error('请先生成音乐');
+      return;
+    }
+    if (!user) {
+      toast.error('请先登录', { description: '登录后才能保存草稿' });
+      return;
+    }
+    setPublishStatus('drafting');
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+      const res = await fetch('/api/drafts', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          title: songTitle || '未命名作品',
+          audioUrl: generatedAudioUrl,
+          coverUrl: null,
+          genre: selectedStyles[0] || null,
+          tags: selectedStyles.length > 0 ? selectedStyles : null,
+          lyrics: lyrics || null,
+          description: description || null,
+          provider: provider.value || null,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('已保存到草稿箱');
+      } else {
+        toast.error('保存失败', { description: data.error });
+      }
+    } catch {
+      toast.error('保存失败', { description: '网络异常，请重试' });
+    } finally {
+      setPublishStatus('idle');
+    }
+  };
+
   const handleGenerate = async () => {
     if (!provider.value) {
       toast.error('请先选择一个模型');
@@ -418,6 +557,17 @@ export default function CreatePage() {
     if (!description.trim() && !lyrics.trim()) {
       toast.error('请输入描述词或歌词');
       return;
+    }
+
+    // Check credits before generation
+    if (provider.value) {
+      const creditCheck = checkCredits(provider.value);
+      if (!creditCheck.success) {
+        toast.error('积分不足', {
+          description: `当前需要 ${creditCheck.required} 积分，剩余 ${creditCheck.balance} 积分。请充值后继续生成。`,
+        });
+        return;
+      }
     }
 
     // Route to PuLe if selected
@@ -439,6 +589,21 @@ export default function CreatePage() {
     setIsGenerating(true);
     setGenerationProgress(0);
     setGeneratedAudioUrl(undefined);
+
+    // Consume credits
+    const songId = `minimax-${Date.now()}`;
+    const consumeRes = await fetch('/api/credits/consume', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ provider: 'minimax', songId }),
+    });
+    const consumeData = await consumeRes.json();
+    if (!consumeData.success) {
+      toast.error('积分扣减失败', { description: consumeData.error });
+      setIsGenerating(false);
+      return;
+    }
+    refreshCreditsBalance();
 
     try {
       // Simulate progress
@@ -492,6 +657,13 @@ export default function CreatePage() {
         } else {
           toast.error(message, { description: suggestion });
         }
+        // Refund credits on API error
+        await fetch('/api/credits/refund', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ provider: 'minimax', songId, reason: 'API error' }),
+        });
+        refreshCreditsBalance();
         return;
       }
 
@@ -518,6 +690,13 @@ export default function CreatePage() {
     } catch (error) {
       console.error('生成失败:', error);
       toast.error('音乐生成失败', { description: '网络异常，请检查网络连接后重试' });
+      // Refund credits on failure
+      await fetch('/api/credits/refund', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider: 'minimax', songId, reason: 'generation_failed' }),
+      });
+      refreshCreditsBalance();
     } finally {
       setIsGenerating(false);
     }
@@ -532,6 +711,21 @@ export default function CreatePage() {
     setPuleItemIds([]);
     setPulePollingStatus('idle');
     setPulePollingMessage('');
+
+    // Consume credits
+    const songId = `pule-${Date.now()}`;
+    const consumeRes = await fetch('/api/credits/consume', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ provider: 'pule', songId }),
+    });
+    const consumeData = await consumeRes.json();
+    if (!consumeData.success) {
+      toast.error('积分扣减失败', { description: consumeData.error });
+      setIsGenerating(false);
+      return;
+    }
+    refreshCreditsBalance();
 
     try {
       // Build prompt from styles and description
@@ -569,6 +763,13 @@ export default function CreatePage() {
         } else {
           toast.error('PuLe 生成失败', { description: message });
         }
+        // Refund credits on PuLe API error
+        await fetch('/api/credits/refund', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ provider: 'pule', songId, reason: code }),
+        });
+        refreshCreditsBalance();
         setIsGenerating(false);
         return;
       }
@@ -588,6 +789,13 @@ export default function CreatePage() {
     } catch (error) {
       console.error('[PuLe] Generate error:', error);
       toast.error('PuLe 生成失败', { description: '网络异常，请检查网络连接后重试' });
+      // Refund credits on failure
+      await fetch('/api/credits/refund', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider: 'pule', songId, reason: 'generation_failed' }),
+      });
+      refreshCreditsBalance();
     } finally {
       setIsGenerating(false);
     }
@@ -602,6 +810,21 @@ export default function CreatePage() {
     setSunoSongIds([]);
     setSunoPollingStatus('idle');
     setSunoPollingMessage('');
+
+    // Consume credits
+    const songId = `suno-${Date.now()}`;
+    const consumeRes = await fetch('/api/credits/consume', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ provider: 'suno', songId }),
+    });
+    const consumeData = await consumeRes.json();
+    if (!consumeData.success) {
+      toast.error('积分扣减失败', { description: consumeData.error });
+      setIsGenerating(false);
+      return;
+    }
+    refreshCreditsBalance();
 
     try {
       const isCustomMode = sunoMode === 'custom';
@@ -664,6 +887,13 @@ export default function CreatePage() {
         } else {
           toast.error('Suno 生成失败', { description: message });
         }
+        // Refund credits on Suno API error
+        await fetch('/api/credits/refund', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ provider: 'suno', songId, reason: code }),
+        });
+        refreshCreditsBalance();
         setIsGenerating(false);
         return;
       }
@@ -688,6 +918,13 @@ export default function CreatePage() {
         ? error.message
         : (typeof error === 'string' ? error : JSON.stringify(error));
       toast.error('Suno 生成失败', { description: errMsg || '网络异常，请检查网络连接后重试' });
+      // Refund credits on failure
+      await fetch('/api/credits/refund', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider: 'suno', songId, reason: 'generation_failed' }),
+      });
+      refreshCreditsBalance();
     } finally {
       setIsGenerating(false);
     }
@@ -698,6 +935,21 @@ export default function CreatePage() {
     setIsGenerating(true);
     setGenerationProgress(0);
     setGeneratedAudioUrl(undefined);
+
+    // Consume credits
+    const songId = `lconai-${Date.now()}`;
+    const consumeRes = await fetch('/api/credits/consume', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ provider: 'lconai', songId }),
+    });
+    const consumeData = await consumeRes.json();
+    if (!consumeData.success) {
+      toast.error('积分扣减失败', { description: consumeData.error });
+      setIsGenerating(false);
+      return;
+    }
+    refreshCreditsBalance();
 
     try {
       const isCustomMode = sunoMode === 'custom';
@@ -730,11 +982,29 @@ export default function CreatePage() {
         body.prompt = promptParts.filter(Boolean).join('，') || '温暖治愈的中文流行';
       }
 
-      const response = await fetch('/api/lconai-generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
+      // Create AbortController for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 120000); // 120 seconds timeout
+
+      let response;
+      try {
+        response = await fetch('/api/lconai-generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+          toast.error('生成超时', { description: '智创聚合生成时间较长，请稍后重试' });
+        } else {
+          toast.error('网络错误', { description: '无法连接到服务器，请检查网络后重试' });
+        }
+        setIsGenerating(false);
+        return;
+      }
 
       const data = await response.json();
 
@@ -751,6 +1021,13 @@ export default function CreatePage() {
         } else {
           toast.error('智创聚合生成失败', { description: message });
         }
+        // Refund credits on LCONAI API error
+        await fetch('/api/credits/refund', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ provider: 'lconai', songId, reason: code }),
+        });
+        refreshCreditsBalance();
         setIsGenerating(false);
         return;
       }
@@ -775,6 +1052,13 @@ export default function CreatePage() {
         ? error.message
         : (typeof error === 'string' ? error : JSON.stringify(error));
       toast.error('智创聚合生成失败', { description: errMsg || '网络异常，请检查网络连接后重试' });
+      // Refund credits on failure
+      await fetch('/api/credits/refund', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider: 'lconai', songId, reason: 'generation_failed' }),
+      });
+      refreshCreditsBalance();
     } finally {
       setIsGenerating(false);
     }
@@ -796,18 +1080,47 @@ export default function CreatePage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background responsive-container relative overflow-hidden">
+      {/* 歌手写真背景 */}
+      <SingerWallpaper image={imageUrl} fade={fade} />
+      
       <Navbar />
       
-      <main className="pt-20 pb-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+      <main className="pt-16 sm:pt-20 pb-24 sm:pb-8 px-3 sm:px-4 lg:px-8 max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gradient-gold mb-2">
-            AI 音乐创作
-          </h1>
-          <p className="text-muted-foreground">
-            选择风格、描述情绪，让 AI 为你创作独一无二的音乐作品
-          </p>
+        <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gradient-gold mb-1 sm:mb-2">
+              AI 音乐创作
+            </h1>
+            <p className="text-sm sm:text-base text-muted-foreground">
+              选择风格、描述情绪，让 AI 为你创作独一无二的音乐作品
+            </p>
+          </div>
+          
+          {/* Credit Balance Display */}
+          {userCredits && (
+            <div className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-black/20 backdrop-blur-sm border border-white/10">
+              <span className="text-amber-400 text-base sm:text-lg">💎</span>
+              <div className="text-right">
+                <div className="text-[10px] sm:text-xs text-muted-foreground">剩余积分</div>
+                <div className={`text-base sm:text-lg font-bold ${userCredits.balance <= 5 ? 'text-orange-400' : 'text-amber-400'}`}>
+                  {userCredits.balance}
+                </div>
+              </div>
+              {currentCreditCost > 0 && (
+                <div className="ml-1.5 sm:ml-2 pl-1.5 sm:pl-2 border-l border-white/10">
+                  <div className="text-[10px] sm:text-xs text-muted-foreground">本次消耗</div>
+                  <div className="text-xs sm:text-sm font-medium text-purple-400">-{currentCreditCost}</div>
+                </div>
+              )}
+              <Link href="/recharge" className="ml-1.5 sm:ml-2 pl-1.5 sm:pl-2 border-l border-white/10">
+                <Button variant="ghost" size="sm" className="text-[10px] sm:text-xs text-primary hover:text-primary/80 h-6 sm:h-7">
+                  充值
+                </Button>
+              </Link>
+            </div>
+          )}
         </div>
 
         {/* Provider Tabs (Top Level) */}
@@ -937,114 +1250,12 @@ export default function CreatePage() {
             onLyricsChange={setAdvancedLyrics}
             styleOfMusic={styleOfMusic}
             onStyleOfMusicChange={setStyleOfMusic}
+            gender={gender.value || 'mixed'}
+            onGenderChange={(v) => gender.toggle(v as 'male' | 'female' | 'duet' | 'instrumental')}
+            timbres={timbres.values}
+            onTimbresChange={timbres.toggle}
           />
         </div>
-
-        {/* Suno-specific Advanced Options (only show when Suno tab is active) */}
-        {provider.value === 'suno' && (
-          <div className="mb-6 space-y-4">
-            {/* Collapsible Suno-specific Options */}
-            <button
-              onClick={() => setSunoAdvancedOpen(!sunoAdvancedOpen)}
-              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <span className={`transition-transform ${sunoAdvancedOpen ? 'rotate-90' : ''}`}>▶</span>
-              Suno 专属选项
-              {(gender.value || timbres.values.length > 0) && (
-                <span className="px-1.5 py-0.5 rounded bg-amber-400/10 text-amber-400 text-[10px]">
-                  已配置
-                </span>
-              )}
-            </button>
-
-            {sunoAdvancedOpen && (
-              <div className="space-y-4 pl-4 border-l border-white/10">
-                {/* Vocal Gender Selector */}
-                <div>
-                  <label className="text-xs text-muted-foreground mb-2 block">人声性别</label>
-                  <div className="flex flex-wrap gap-2">
-                    {[
-                      { value: 'male' as const, emoji: '👨', label: '男声' },
-                      { value: 'female' as const, emoji: '👩', label: '女声' },
-                      { value: 'duet' as const, emoji: '👥', label: '男女对唱' },
-                      { value: 'instrumental' as const, emoji: '🎼', label: '纯乐器' },
-                    ].map((opt) => (
-                      <button
-                        key={opt.value}
-                        onClick={() => gender.toggle(opt.value)}
-                        className={`
-                          px-3 py-1.5 rounded-lg text-sm transition-all
-                          ${gender.value === opt.value
-                            ? 'bg-amber-400/20 text-amber-400 border border-amber-400/50'
-                            : 'bg-white/5 text-muted-foreground border border-white/10 hover:bg-white/10'
-                          }
-                        `}
-                      >
-                        {opt.emoji} {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Timbre Chips */}
-                <div>
-                  <label className="text-xs text-muted-foreground mb-2 block">
-                    音色标签
-                    <span className="ml-2 text-muted-foreground/50">（最多选 {MAX_TIMBRE_CHIP_SELECTED} 个）</span>
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {VOCAL_TIMBRES.map((timb) => {
-                      const isSelected = timbres.values.includes(timb.tag);
-                      const isDisabled = !isSelected && timbres.values.length >= MAX_TIMBRE_CHIP_SELECTED;
-                      return (
-                        <button
-                          key={timb.tag}
-                          onClick={() => {
-                            if (isSelected) {
-                              timbres.toggle(timb.tag);
-                            } else if (!isDisabled) {
-                              timbres.toggle(timb.tag);
-                            }
-                          }}
-                          disabled={isDisabled}
-                          className={`
-                            px-3 py-1.5 rounded-lg text-sm transition-all
-                            ${isSelected
-                              ? 'bg-purple-500/20 text-purple-300 border border-purple-500/50'
-                              : isDisabled
-                                ? 'bg-white/5 text-muted-foreground/30 border border-white/5 cursor-not-allowed'
-                                : 'bg-white/5 text-muted-foreground border border-white/10 hover:bg-white/10'
-                            }
-                          `}
-                        >
-                          {timb.emoji} {timb.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Coming Soon: Persona + Voice Clone */}
-                <div className="flex gap-3 pt-2">
-                  <button
-                    disabled
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm bg-white/5 text-muted-foreground/50 border border-white/10 cursor-not-allowed"
-                  >
-                    🎵 我的音色库
-                    <span className="px-1.5 py-0.5 rounded bg-white/10 text-[10px]">Coming Soon</span>
-                  </button>
-                  <button
-                    disabled
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm bg-white/5 text-muted-foreground/50 border border-white/10 cursor-not-allowed"
-                  >
-                    🎙️ 上传我的声音
-                    <span className="px-1.5 py-0.5 rounded bg-white/10 text-[10px]">Coming Soon</span>
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
 
         {/* LCONAI (智创聚合) Version Cards (only show when LCONAI tab is active) */}
         {provider.value === 'lconai' && (
@@ -1373,6 +1584,27 @@ export default function CreatePage() {
               generationProgress={generationProgress}
             />
 
+            {/* Publish / Draft Actions */}
+            {generatedAudioUrl && !isGenerating && (
+              <div className="glass-card p-4 flex items-center gap-3">
+                <Button
+                  onClick={handlePublish}
+                  disabled={publishStatus !== 'idle'}
+                  className="flex-1 bg-gradient-to-r from-[#d4af37] to-[#f59e0b] hover:from-[#d4af37]/90 hover:to-[#f59e0b]/90 text-black font-medium"
+                >
+                  {publishStatus === 'publishing' ? '发布中...' : '发布到发现页'}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleSaveDraft}
+                  disabled={publishStatus !== 'idle'}
+                  className="flex-1 border-white/20 text-white hover:bg-white/10"
+                >
+                  {publishStatus === 'drafting' ? '保存中...' : '保存到草稿箱'}
+                </Button>
+              </div>
+            )}
+
             {/* PuLe Status Display */}
             {provider.value === 'pule' && pulePollingStatus !== 'idle' && (
               <div className="glass-card p-4">
@@ -1505,6 +1737,9 @@ export default function CreatePage() {
                 <>
                   <Sparkles className="w-5 h-5 mr-2" />
                   生成音乐
+                  {currentCreditCost > 0 && (
+                    <span className="ml-2 text-sm opacity-75">(-{currentCreditCost} 积分)</span>
+                  )}
                 </>
               )}
             </Button>

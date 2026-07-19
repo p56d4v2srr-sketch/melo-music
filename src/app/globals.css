@@ -283,3 +283,120 @@ body {
   transform: scale(1.1);
   box-shadow: 0 0 15px rgba(212, 175, 55, 0.7);
 }
+
+/* Responsive Design - 防止横向滚动条 */
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+/* 横屏模式优化 */
+@media (orientation: landscape) {
+  /* 横屏时底部播放器缩小 */
+  .global-player {
+    height: 60px !important;
+  }
+  
+  .global-player .player-content {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+  
+  /* 横屏时弹窗居中 */
+  [role="dialog"],
+  [data-radix-dialog-content],
+  [data-radix-sheet-content] {
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  
+  /* 横屏时主内容区域底部留空减少 */
+  main {
+    padding-bottom: 70px !important;
+  }
+}
+
+/* 小屏幕竖屏优化 */
+@media (max-width: 640px) and (orientation: portrait) {
+  /* 移动端底部播放器 */
+  .global-player {
+    height: 70px;
+  }
+  
+  /* 移动端主内容区域底部留空 */
+  main {
+    padding-bottom: 80px;
+  }
+}
+
+/* 平板横屏优化 */
+@media (min-width: 768px) and (orientation: landscape) {
+  /* 平板横屏时底部播放器更小 */
+  .global-player {
+    height: 56px !important;
+  }
+  
+  main {
+    padding-bottom: 60px !important;
+  }
+}
+
+/* 响应式容器 */
+.responsive-container {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+/* 创作页面横屏布局 */
+@media (orientation: landscape) and (min-width: 768px) {
+  .create-page-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+  
+  .create-page-layout .input-section {
+    order: 1;
+  }
+  
+  .create-page-layout .preview-section {
+    order: 2;
+  }
+}
+
+/* Safe area for iOS devices */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+/* Pulse animations for nav icons */
+@keyframes pulse-gentle {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes ping-slow {
+  0% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  75%, 100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+.animate-pulse-gentle {
+  animation: pulse-gentle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-ping-slow {
+  animation: ping-slow 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}

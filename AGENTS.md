@@ -211,3 +211,41 @@ AI 虚拟音乐人生成（头像/名字/简介/风格）
 
 ### GET /api/interactions/comment
 获取评论列表
+
+## 积分计费系统
+
+### 概述
+- 用户首次使用自动注册，赠送 10 积分（体验额度）
+- 每次生成前检查余额，积分不足则阻止生成
+- 生成失败时自动退还积分
+
+### 积分消耗规则
+| Provider | 积分/首 |
+|----------|---------|
+| MiniMax | 5 |
+| PuLe | 5 |
+| Suno | 10 |
+| 智创聚合 (LCONAI) | 10 |
+
+### API 接口
+
+#### GET /api/credits/balance
+查询用户积分余额
+
+#### POST /api/credits/consume
+扣减积分（生成前调用）
+- `provider`: 模型标识
+- `songId`: 歌曲 ID（用于防重复扣减）
+- `checkOnly`: 仅检查是否充足，不实际扣减
+
+#### POST /api/credits/refund
+退还积分（生成失败时调用）
+- `provider`: 模型标识
+- `songId`: 歌曲 ID
+- `reason`: 退还原因
+
+#### GET /api/credits/records
+获取积分消费记录
+
+### 核心文件
+- `src/lib/credits.ts` - 积分核心逻辑（localStorage 存储，预留 Supabase 迁移接口）

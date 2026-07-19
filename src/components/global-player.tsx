@@ -183,7 +183,7 @@ function GlobalPlayer() {
         initial={{ y: 100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 100, opacity: 0 }}
-        className="fixed bottom-0 left-0 right-0 z-50 glass-card border-t border-white/10"
+        className="fixed bottom-0 left-0 right-0 z-50 glass-card border-t border-white/10 global-player"
       >
         {/* Progress Bar */}
         <div 
@@ -203,51 +203,51 @@ function GlobalPlayer() {
           </div>
         </div>
 
-        <div className="flex items-center gap-4 px-4 py-3">
+        <div className="flex items-center gap-2 sm:gap-4 px-3 sm:px-4 py-2 sm:py-3 player-content">
           {/* Song Info */}
           <div 
-            className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
+            className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0 cursor-pointer"
             onClick={() => setIsExpanded(!isExpanded)}
           >
-            <div className="w-12 h-12 rounded-lg overflow-hidden bg-gradient-to-br from-primary/20 to-accent/20 flex-shrink-0">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg overflow-hidden bg-gradient-to-br from-primary/20 to-accent/20 flex-shrink-0">
               {currentSong.coverUrl ? (
                 <img src={currentSong.coverUrl} alt={currentSong.title} className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
-                  <Music className="w-6 h-6 text-primary/50" />
+                  <Music className="w-5 h-5 sm:w-6 sm:h-6 text-primary/50" />
                 </div>
               )}
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-medium truncate">{currentSong.title}</p>
+              <p className="text-xs sm:text-sm font-medium truncate">{currentSong.title}</p>
               <p className="text-xs text-muted-foreground truncate">{currentSong.artist}</p>
             </div>
           </div>
 
           {/* Controls */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             <button
               onClick={previous}
-              className="w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+              className="w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
             >
-              <SkipBack className="w-4 h-4" />
+              <SkipBack className="w-3 h-3 sm:w-4 sm:h-4" />
             </button>
             <button
               onClick={togglePlay}
-              className="w-10 h-10 rounded-full bg-gradient-to-r from-primary to-accent flex items-center justify-center text-white hover:scale-105 transition-transform"
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-r from-primary to-accent flex items-center justify-center text-white hover:scale-105 transition-transform"
             >
-              {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" />}
+              {isPlaying ? <Pause className="w-4 h-4 sm:w-5 sm:h-5" /> : <Play className="w-4 h-4 sm:w-5 sm:h-5 ml-0.5" />}
             </button>
             <button
               onClick={next}
-              className="w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+              className="w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
             >
-              <SkipForward className="w-4 h-4" />
+              <SkipForward className="w-3 h-3 sm:w-4 sm:h-4" />
             </button>
           </div>
 
-          {/* Volume */}
-          <div className="hidden md:flex items-center gap-2 w-32">
+          {/* Volume - Hidden on mobile, shown on landscape and desktop */}
+          <div className="hidden landscape:flex md:flex items-center gap-2 w-24 sm:w-32">
             <button
               onClick={toggleMute}
               className="text-muted-foreground hover:text-foreground transition-colors"

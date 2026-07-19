@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { Inspector } from 'react-dev-inspector';
 import { PlayerProvider } from '@/components/global-player';
 import { Toaster } from '@/components/ui/sonner';
+import { SupabaseConfigProvider } from '@/lib/supabase-config-inject';
+import { AuthProvider } from '@/lib/auth-context';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -20,6 +22,15 @@ export const metadata: Metadata = {
     'DeepSeek',
   ],
   authors: [{ name: 'Melo Music Team' }],
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Melo Music',
+  },
+  formatDetection: {
+    telephone: false,
+  },
   openGraph: {
     title: 'Melo Music - 让每个人都能玩音乐',
     description: '用自然语言生成专业质感音乐作品，AI MV 一键生成',
@@ -32,6 +43,14 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: '#0a0a0f',
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -41,13 +60,48 @@ export default function RootLayout({
 
   return (
     <html lang="zh-CN" className="dark">
+      <head>
+        <link rel="apple-touch-icon" href="/icons/icon-180x180.png" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="theme-color" content="#0a0a0f" />
+      </head>
       <body className={`antialiased`}>
         {isDev && <Inspector />}
-        <PlayerProvider>
-          {children}
-        </PlayerProvider>
+        <SupabaseConfigProvider>
+          <AuthProvider>
+            <PlayerProvider>
+              {children}
+            </PlayerProvider>
+          </AuthProvider>
+        </SupabaseConfigProvider>
         <Toaster />
+        <ServiceWorkerRegistration />
       </body>
     </html>
+  );
+}
+
+// Service Worker Registration Component
+function ServiceWorkerRegistration() {
+  return (
+    <script
+      dangerouslySetInnerHTML={{
+        __html: `
+          if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+              navigator.serviceWorker.register('/sw.js').then(
+                function(registration) {
+                  console.log('[PWA] Service Worker registered with scope:', registration.scope);
+                },
+                function(error) {
+                  console.log('[PWA] Service Worker registration failed:', error);
+                }
+              );
+            });
+          }
+        `,
+      }}
+    />
   );
 }

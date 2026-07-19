@@ -1,173 +1,259 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Navbar } from '@/components/navbar';
-import { Settings as SettingsIcon, Key, Save, Eye, EyeOff } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { useAuth } from '@/lib/auth-context';
+import { User, Mail, FileText, Save, Camera, Loader2 } from 'lucide-react';
+import Link from 'next/link';
+import { cn } from '@/lib/utils';
 
-interface ApiConfig {
-  sunoApiKey: string;
-  deepseekApiKey: string;
-  elevenlabsApiKey: string;
+interface UserProfile {
+  id: string;
+  email: string;
+  nickname: string;
+  avatar: string;
+  bio: string;
 }
 
 export default function SettingsPage() {
-  const [config, setConfig] = useState<ApiConfig>({
-    sunoApiKey: '',
-    deepseekApiKey: '',
-    elevenlabsApiKey: '',
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  
+  const [formData, setFormData] = useState({
+    nickname: '',
+    avatar: '',
+    bio: '',
   });
-  const [showKeys, setShowKeys] = useState({
-    suno: false,
-    deepseek: false,
-    elevenlabs: false,
-  });
-  const [saved, setSaved] = useState(false);
 
-  const handleSave = () => {
-    // In a real app, this would save to backend/localStorage
-    localStorage.setItem('apiConfig', JSON.stringify(config));
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+  useEffect(() => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    const fetchProfile = async () => {
+      try {
+        const res = await fetch('/api/user/profile', {
+          headers: { 'x-user-id': user.id }
+        });
+        const data = await res.json();
+        if (data.success && data.data) {
+          setProfile(data.data);
+          setFormData({
+            nickname: data.data.nickname || '',
+            avatar: data.data.avatar || '',
+            bio: data.data.bio || '',
+          });
+        }
+      } catch (error) {
+        console.error('Fetch profile error:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, [user]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+
+    setSaving(true);
+    setMessage(null);
+
+    try {
+      const res = await fetch('/api/user/profile', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': user.id
+        },
+        body: JSON.stringify(formData)
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        setMessage({ type: 'success', text: '保存成功' });
+        setProfile({ ...profile!, ...formData });
+      } else {
+        setMessage({ type: 'error', text: data.error || '保存失败' });
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: '保存失败' });
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const toggleShowKey = (key: keyof typeof showKeys) => {
-    setShowKeys({ ...showKeys, [key]: !showKeys[key] });
-  };
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <main className="pt-20 pb-8 px-4 sm:px-6 lg:px-8 max-w-2xl mx-auto">
+          <div className="text-center py-12">
+            <User className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-muted-foreground mb-4">请先登录</p>
+            <Link href="/login" className="text-primary hover:underline">
+              去登录
+            </Link>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <main className="pt-20 pb-8 px-4 sm:px-6 lg:px-8 max-w-2xl mx-auto">
+          <div className="flex items-center justify-center py-12">
+            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
+      <main className="pt-20 pb-8 px-4 sm:px-6 lg:px-8 max-w-2xl mx-auto">
+        <h1 className="text-2xl font-bold text-foreground mb-6">个人设置</h1>
 
-      <main className="pt-20 pb-8 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gradient-gold mb-2">设置</h1>
-          <p className="text-muted-foreground">配置 API 密钥和应用偏好</p>
-        </div>
+        {/* Message */}
+        {message && (
+          <div className={cn(
+            'mb-6 p-4 rounded-xl',
+            message.type === 'success' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'
+          )}>
+            {message.text}
+          </div>
+        )}
 
-        {/* API Configuration */}
-        <div className="glass-card p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-            <Key className="w-5 h-5 text-primary" />
-            API 配置
-          </h2>
-
-          <div className="space-y-6">
-            {/* Suno API Key */}
-            <div>
-              <label className="text-sm font-medium mb-2 block">
-                Suno API Key
-                <span className="text-xs text-muted-foreground ml-2">用于音乐生成</span>
-              </label>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Avatar */}
+          <div className="bg-card rounded-xl p-6 border border-border">
+            <label className="block text-sm font-medium text-foreground mb-4">
+              头像
+            </label>
+            <div className="flex items-center gap-4">
               <div className="relative">
-                <input
-                  type={showKeys.suno ? 'text' : 'password'}
-                  value={config.sunoApiKey}
-                  onChange={(e) => setConfig({ ...config, sunoApiKey: e.target.value })}
-                  placeholder="sk-..."
-                  className="w-full px-3 py-2 pr-10 bg-white/5 border border-white/10 rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                <img
+                  src={formData.avatar || '/default-avatar.png'}
+                  alt="Avatar"
+                  className="w-20 h-20 rounded-full object-cover border-2 border-border"
                 />
-                <button
-                  onClick={() => toggleShowKey('suno')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showKeys.suno ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+                <label className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 hover:opacity-100 transition-opacity cursor-pointer">
+                  <Camera className="w-6 h-6 text-white" />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          setFormData({ ...formData, avatar: reader.result as string });
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                </label>
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                从 sunoapi.org 获取 API 密钥
-              </p>
-            </div>
-
-            {/* DeepSeek API Key */}
-            <div>
-              <label className="text-sm font-medium mb-2 block">
-                DeepSeek API Key
-                <span className="text-xs text-muted-foreground ml-2">用于歌词创作</span>
-              </label>
-              <div className="relative">
+              <div className="flex-1">
                 <input
-                  type={showKeys.deepseek ? 'text' : 'password'}
-                  value={config.deepseekApiKey}
-                  onChange={(e) => setConfig({ ...config, deepseekApiKey: e.target.value })}
-                  placeholder="sk-..."
-                  className="w-full px-3 py-2 pr-10 bg-white/5 border border-white/10 rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  type="text"
+                  value={formData.avatar}
+                  onChange={(e) => setFormData({ ...formData, avatar: e.target.value })}
+                  placeholder="输入头像 URL"
+                  className="w-full px-4 py-2 bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                 />
-                <button
-                  onClick={() => toggleShowKey('deepseek')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showKeys.deepseek ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+                <p className="text-xs text-muted-foreground mt-1">
+                  可以输入图片 URL 或点击头像上传
+                </p>
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                从 platform.deepseek.com 获取 API 密钥
-              </p>
-            </div>
-
-            {/* ElevenLabs API Key */}
-            <div>
-              <label className="text-sm font-medium mb-2 block">
-                ElevenLabs API Key
-                <span className="text-xs text-muted-foreground ml-2">可选，用于音色克隆</span>
-              </label>
-              <div className="relative">
-                <input
-                  type={showKeys.elevenlabs ? 'text' : 'password'}
-                  value={config.elevenlabsApiKey}
-                  onChange={(e) => setConfig({ ...config, elevenlabsApiKey: e.target.value })}
-                  placeholder="xi-..."
-                  className="w-full px-3 py-2 pr-10 bg-white/5 border border-white/10 rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                />
-                <button
-                  onClick={() => toggleShowKey('elevenlabs')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showKeys.elevenlabs ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                从 elevenlabs.io 获取 API 密钥（可选）
-              </p>
             </div>
           </div>
 
-          {/* Save Button */}
-          <Button
-            onClick={handleSave}
-            className="mt-6 gradient-gold-purple hover:opacity-90 glow-gold"
+          {/* Nickname */}
+          <div className="bg-card rounded-xl p-6 border border-border">
+            <label className="block text-sm font-medium text-foreground mb-2">
+              <User className="w-4 h-4 inline mr-2" />
+              昵称
+            </label>
+            <input
+              type="text"
+              value={formData.nickname}
+              onChange={(e) => setFormData({ ...formData, nickname: e.target.value })}
+              placeholder="输入昵称"
+              maxLength={50}
+              className="w-full px-4 py-3 bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+            />
+          </div>
+
+          {/* Bio */}
+          <div className="bg-card rounded-xl p-6 border border-border">
+            <label className="block text-sm font-medium text-foreground mb-2">
+              <FileText className="w-4 h-4 inline mr-2" />
+              个人简介
+            </label>
+            <textarea
+              value={formData.bio}
+              onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+              placeholder="介绍一下自己..."
+              maxLength={500}
+              rows={4}
+              className="w-full px-4 py-3 bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              {formData.bio.length}/500
+            </p>
+          </div>
+
+          {/* Email (read-only) */}
+          <div className="bg-card rounded-xl p-6 border border-border">
+            <label className="block text-sm font-medium text-foreground mb-2">
+              <Mail className="w-4 h-4 inline mr-2" />
+              邮箱
+            </label>
+            <input
+              type="email"
+              value={user.email || ''}
+              disabled
+              className="w-full px-4 py-3 bg-background/50 border border-border rounded-lg text-muted-foreground cursor-not-allowed"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              邮箱不可修改
+            </p>
+          </div>
+
+          {/* Submit */}
+          <button
+            type="submit"
+            disabled={saving}
+            className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-medium hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            <Save className="w-4 h-4 mr-2" />
-            {saved ? '已保存' : '保存配置'}
-          </Button>
-        </div>
-
-        {/* About */}
-        <div className="glass-card p-6">
-          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-            <SettingsIcon className="w-5 h-5 text-primary" />
-            关于
-          </h2>
-          <div className="space-y-3 text-sm text-muted-foreground">
-            <div className="flex justify-between">
-              <span>版本</span>
-              <span>1.0.0</span>
-            </div>
-            <div className="flex justify-between">
-              <span>技术栈</span>
-              <span>Next.js + TypeScript + Tailwind</span>
-            </div>
-            <div className="flex justify-between">
-              <span>音乐 API</span>
-              <span>Suno</span>
-            </div>
-            <div className="flex justify-between">
-              <span>LLM</span>
-              <span>DeepSeek</span>
-            </div>
-          </div>
-        </div>
+            {saving ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                保存中...
+              </>
+            ) : (
+              <>
+                <Save className="w-5 h-5" />
+                保存设置
+              </>
+            )}
+          </button>
+        </form>
       </main>
     </div>
   );

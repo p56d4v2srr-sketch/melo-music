@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { Navbar } from '@/components/navbar';
 import { mockSongsWithArtists, formatCount, formatDuration } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
+import { shareSong } from '@/lib/share';
 import {
   Play,
   Pause,
@@ -230,7 +231,16 @@ export default function SongDetailPage() {
               >
                 <Star className="w-5 h-5" fill={isCollected ? 'currentColor' : 'none'} />
               </button>
-              <button className="p-3 rounded-xl glass-card text-muted-foreground hover:text-foreground transition-all">
+              <button
+                onClick={() => shareSong({
+                  id: song.id,
+                  title: song.title,
+                  coverUrl: song.cover_url,
+                  artistName: song.artist?.nickname,
+                })}
+                className="p-3 rounded-xl glass-card text-muted-foreground hover:text-foreground transition-all"
+                title="分享"
+              >
                 <Share2 className="w-5 h-5" />
               </button>
               <a
