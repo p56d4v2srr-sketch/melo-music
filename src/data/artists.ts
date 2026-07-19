@@ -5,7 +5,7 @@
 
 export type ArtistGender = 'male' | 'female' | 'group' | 'mixed';
 export type ArtistRegion = 'CN' | 'HK' | 'TW' | 'US' | 'UK' | 'JP' | 'KR' | 'ES' | 'FR' | 'IN' | 'BR' | 'OTHER';
-export type ArtistLang = 'zh' | 'en' | 'ja' | 'ko' | 'es' | 'fr' | 'de' | 'it' | 'pt' | 'hi' | 'other';
+export type ArtistLang = 'zh' | 'en' | 'ja' | 'ko' | 'es' | 'fr' | 'de' | 'it' | 'pt' | 'hi' | 'yue' | 'ug' | 'other';
 export type ArtistCategory =
   | '华语流行' | '民谣' | '摇滚' | 'Rap' | '独立'
   | '欧美Pop' | '欧美Rock' | 'HipHop' | 'R&B'
@@ -580,6 +580,99 @@ export const ARTISTS: Artist[] = [
   { id: 498, name_zh: 'Sia', name_en: 'Sia', gender: 'female', region: 'OTHER', language: ['en'], genres: [16, 28, 3], tags: ['澳洲', '创作', '高音', '神秘'], top_songs: ['Chandelier', 'Cheap Thrills', 'Elastic Heart', 'Titanium', 'Unstoppable'], voice_desc: '沙哑高音女声', hot_score: 7, category: '其他' },
   { id: 499, name_zh: 'AC/DC', name_en: 'AC/DC', gender: 'group', region: 'OTHER', language: ['en'], genres: [1, 2, 8], tags: ['澳洲', '硬摇滚', '传奇', '经典'], top_songs: ['Back in Black', 'Highway to Hell', 'Thunderstruck', 'TNT', 'You Shook Me All Night Long'], voice_desc: '高亢摇滚男声', hot_score: 8, category: '其他' },
   { id: 500, name_zh: '洛德', name_en: 'Lorde', gender: 'female', region: 'OTHER', language: ['en'], genres: [16, 17, 28], tags: ['新西兰', '独立', '创作', '新生代'], top_songs: ['Royals', 'Green Light', 'Team', 'Liability', 'Solar Power'], voice_desc: '独特个性女声', hot_score: 7, category: '其他' },
+
+  // ===== V5.9 增补：华语歌手扩充 (id 501-580) =====
+  // 古风/国风
+  { id: 501, name_zh: '河图', name_en: 'Hetu', gender: 'male', region: 'CN', language: ['zh'], genres: [132, 133, 48], tags: ['古风', '国风', '网络', '墨明棋妙'], top_songs: ['倾尽天下', '第三十八年夏至', '风起天阑', '命悬一线', '白衣'], voice_desc: '清冷古风男声', hot_score: 7, category: '华语流行' },
+  { id: 502, name_zh: '董贞', name_en: 'Dong Zhen', gender: 'female', region: 'CN', language: ['zh'], genres: [132, 133, 48], tags: ['古风', '仙侠', '游戏', '唯美'], top_songs: ['回到起点', '醉梦仙霖', '情醉', '相思引', '雕花笼'], voice_desc: '空灵仙侠女声', hot_score: 6, category: '华语流行' },
+  { id: 503, name_zh: 'HITA', name_en: 'HITA', gender: 'female', region: 'CN', language: ['zh'], genres: [132, 133, 48], tags: ['古风', '墨明棋妙', '网络', '才女'], top_songs: ['采薇', '再逢明月照九州', '步步皆殇', '盛唐夜唱', '浮生未歇'], voice_desc: '温婉古风女声', hot_score: 6, category: '华语流行' },
+  { id: 504, name_zh: '音频怪物', name_en: 'Audio Monster', gender: 'male', region: 'CN', language: ['zh'], genres: [132, 133, 48], tags: ['古风', '网络', '配音', '多面'], top_songs: ['琴师', '长安忆', '业火苍云', '追风', '剑起苍澜'], voice_desc: '多变古风男声', hot_score: 6, category: '华语流行' },
+  { id: 505, name_zh: '小曲儿', name_en: 'Xiao Qu Er', gender: 'male', region: 'CN', language: ['zh'], genres: [132, 133, 48], tags: ['古风', '网络', '温润', '墨明棋妙'], top_songs: ['上邪', '锦鲤抄', '烟雨', '红尘', '江湖笑'], voice_desc: '温润古风男声', hot_score: 6, category: '华语流行' },
+  // 网络/短视频热门
+  { id: 506, name_zh: '半阳', name_en: 'Ban Yang', gender: 'male', region: 'CN', language: ['zh'], genres: [16, 25, 48], tags: ['网络', '短视频', '沧桑', '民谣'], top_songs: ['一曲相思', '三生三世十里桃花', '南风吹', '渡我不渡她', '孤城'], voice_desc: '沧桑磁性男声', hot_score: 6, category: '华语流行' },
+  { id: 507, name_zh: '花姐', name_en: 'Hua Jie', gender: 'female', region: 'CN', language: ['zh'], genres: [16, 25, 48], tags: ['网络', '短视频', '治愈', '民谣'], top_songs: ['狂浪', '三生三世十里桃花', '渡我不渡她', '一曲相思', '南风吹'], voice_desc: '沙哑治愈女声', hot_score: 6, category: '华语流行' },
+  { id: 508, name_zh: '大欢', name_en: 'Da Huan', gender: 'male', region: 'CN', language: ['zh'], genres: [16, 25, 48], tags: ['网络', '短视频', '深情', '沧桑'], top_songs: ['多年以后', '这个年代', '受了点伤', '离别的秋天', '十送红军'], voice_desc: '沧桑深情男声', hot_score: 5, category: '华语流行' },
+  { id: 509, name_zh: '魏佳艺', name_en: 'Wei Jiayi', gender: 'female', region: 'CN', language: ['zh'], genres: [16, 25, 48], tags: ['网络', '短视频', '深情', '治愈'], top_songs: ['可可托海的牧羊人', '送亲', '站着等你三千年', '白毛女', '情罪'], voice_desc: '深情沧桑女声', hot_score: 5, category: '华语流行' },
+  { id: 510, name_zh: '王爱华', name_en: 'Wang Aihua', gender: 'female', region: 'CN', language: ['zh'], genres: [16, 25, 48], tags: ['网络', '广场舞', '热门', '接地气'], top_songs: ['可可托海的牧羊人', '送亲', '站着等你三千年', '情罪', '白毛女'], voice_desc: '深情接地气女声', hot_score: 5, category: '华语流行' },
+  // 说唱/嘻哈扩充
+  { id: 511, name_zh: '万妮达', name_en: 'Vinida', gender: 'female', region: 'CN', language: ['zh', 'en'], genres: [56, 36, 37], tags: ['说唱', '女rapper', '福州', '国际化'], top_songs: ['Manta', 'What You Watching', 'Undeniable', 'Manta', 'Cloud'], voice_desc: '磁性个性女rapper', hot_score: 6, category: 'Rap' },
+  { id: 512, name_zh: '刘聪', name_en: 'Key.L', gender: 'male', region: 'CN', language: ['zh'], genres: [56, 36, 37], tags: ['说唱', 'C-BLOCK', '长沙', '旋律'], top_songs: ['Hey KONG', '经济舱', 'My Story', 'Now You Know', '别怕变老'], voice_desc: '旋律说唱男声', hot_score: 7, category: 'Rap' },
+  { id: 513, name_zh: '盛宇', name_en: 'DamnShine', gender: 'male', region: 'CN', language: ['zh'], genres: [56, 36, 37], tags: ['说唱', 'C-BLOCK', '长沙', '硬核'], top_songs: ['隆里电丝', '江湖流', '一代', 'Now You Know', '别怕变老'], voice_desc: '硬核说唱男声', hot_score: 6, category: 'Rap' },
+  { id: 514, name_zh: '功夫胖', name_en: 'KungFuPen', gender: 'male', region: 'CN', language: ['zh'], genres: [56, 36, 37], tags: ['说唱', 'C-BLOCK', '长沙', '技术流'], top_songs: ['跳跳糖', '一代', '江湖流', 'Now You Know', '别怕变老'], voice_desc: '技术流说唱男声', hot_score: 6, category: 'Rap' },
+  { id: 515, name_zh: '艾热', name_en: 'AIR', gender: 'male', region: 'CN', language: ['zh', 'ug'], genres: [56, 36, 37], tags: ['说唱', '新疆', '旋律', '冠军'], top_songs: ['星球坠落', '千里万里', '我的新衣', '别怕变老', 'Now You Know'], voice_desc: '旋律说唱男声', hot_score: 7, category: 'Rap' },
+  { id: 516, name_zh: '那吾克热', name_en: 'LIL-EM', gender: 'male', region: 'CN', language: ['zh', 'ug'], genres: [56, 36, 37], tags: ['说唱', '新疆', '快嘴', '技术流'], top_songs: ['儿子娃娃', '三体', '天空之城', 'Now You Know', '别怕变老'], voice_desc: '快嘴技术流男声', hot_score: 6, category: 'Rap' },
+  { id: 517, name_zh: '黄旭', name_en: 'YellowSkin', gender: 'male', region: 'CN', language: ['zh'], genres: [56, 36, 37], tags: ['说唱', '北京', '硬核', '实力'], top_songs: ['阳光下的孩子', 'Rap Star', 'Now You Know', '别怕变老', 'Manta'], voice_desc: '硬核实力男声', hot_score: 5, category: 'Rap' },
+  { id: 518, name_zh: '孙旭', name_en: 'Sun Xu', gender: 'male', region: 'CN', language: ['zh'], genres: [56, 36, 37], tags: ['说唱', '北京', 'Old School', '地下'], top_songs: ['北京北京', 'Now You Know', '别怕变老', 'Manta', 'What You Watching'], voice_desc: 'Old School男声', hot_score: 5, category: 'Rap' },
+  // 独立/乐队扩充
+  { id: 519, name_zh: '刺猬乐队', name_en: 'Hedgehog', gender: 'group', region: 'CN', language: ['zh'], genres: [1, 10, 48], tags: ['独立', '乐队', '朋克', '子健'], top_songs: ['火车驶向云外', '24小时摇滚聚会', '生之响往', '只要平凡', '白日梦蓝'], voice_desc: '子健沙哑男声', hot_score: 7, category: '独立' },
+  { id: 520, name_zh: '新裤子', name_en: 'New Pants', gender: 'group', region: 'CN', language: ['zh'], genres: [1, 18, 23], tags: ['独立', '乐队', '新浪潮', '彭磊'], top_songs: ['你要跳舞吗', '生活因你而火热', '没有理想的人不伤心', 'bye bye', '别再问我什么是迪斯科'], voice_desc: '彭磊独特男声', hot_score: 8, category: '独立' },
+  { id: 521, name_zh: '痛仰乐队', name_en: 'Miserable Faith', gender: 'group', region: 'CN', language: ['zh'], genres: [1, 6, 10], tags: ['独立', '乐队', '摇滚', '高虎'], top_songs: ['再见杰克', '公路之歌', '为你唱首歌', '不要停止我的音乐', '西湖'], voice_desc: '高虎磁性男声', hot_score: 7, category: '独立' },
+  { id: 522, name_zh: '万能青年旅店', name_en: 'Omnipotent Youth Society', gender: 'group', region: 'CN', language: ['zh'], genres: [1, 8, 10], tags: ['独立', '乐队', '艺术摇滚', '董亚千'], top_songs: ['杀死那个石家庄人', '秦皇岛', '十万嬉皮', '大石碎胸口', '揪心的玩笑'], voice_desc: '董亚千独特男声', hot_score: 8, category: '独立' },
+  { id: 523, name_zh: '海龟先生', name_en: 'Mr. Sea Turtle', gender: 'group', region: 'CN', language: ['zh'], genres: [1, 3, 48], tags: ['独立', '乐队', '雷鬼', '李红旗'], top_songs: ['男孩别哭', '玛卡瑞纳', 'Where Are You', '我', '草东没有派对'], voice_desc: '李红旗慵懒男声', hot_score: 6, category: '独立' },
+  { id: 524, name_zh: 'Click#15', name_en: 'Click#15', gender: 'group', region: 'CN', language: ['zh', 'en'], genres: [64, 65, 28], tags: ['独立', '乐队', '放克', 'R&B'], top_songs: ['Get Funk', 'Steal Your Love', 'Crazy', 'Why', 'Mojito'], voice_desc: 'Ricky磁性男声', hot_score: 6, category: '独立' },
+  { id: 525, name_zh: '盘尼西林', name_en: 'Penicillin', gender: 'group', region: 'CN', language: ['zh'], genres: [1, 7, 3], tags: ['独立', '乐队', '英伦', '浪漫'], top_songs: ['雨夜曼彻斯特', '再谈记忆', 'Bang Bang', 'Red Lips', '她'], voice_desc: '小乐浪漫男声', hot_score: 6, category: '独立' },
+  // 民谣扩充
+  { id: 526, name_zh: '钟立风', name_en: 'Zhong Lifeng', gender: 'male', region: 'CN', language: ['zh'], genres: [48, 49, 17], tags: ['民谣', '文艺', '诗人', '独立'], top_songs: ['像风一样自由', '上海1943', '旅途', '无问西东', '一剪梅'], voice_desc: '文艺磁性男声', hot_score: 5, category: '民谣' },
+  { id: 527, name_zh: '万晓利', name_en: 'Wan Xiaoli', gender: 'male', region: 'CN', language: ['zh'], genres: [48, 49, 17], tags: ['民谣', '独立', '实验', '先锋'], top_songs: ['姑娘', '这一切没有那么的值得', '狐狸', '陀螺', '达摩花'], voice_desc: '独特实验男声', hot_score: 5, category: '民谣' },
+  { id: 528, name_zh: '张玮玮', name_en: 'Zhang Weiwei', gender: 'male', region: 'CN', language: ['zh'], genres: [48, 49, 17], tags: ['民谣', '独立', '手风琴', '西北'], top_songs: ['米店', '白银饭店', '两只吉他', '红河谷', '黄河谣'], voice_desc: '沧桑西北男声', hot_score: 6, category: '民谣' },
+  { id: 529, name_zh: '郭顶', name_en: 'Guo Ding', gender: 'male', region: 'CN', language: ['zh'], genres: [16, 48, 17], tags: ['创作', '独立', '制作', '全能'], top_songs: ['水星记', '凄美地', '保留', '想着你', '浪别'], voice_desc: '磁性创作男声', hot_score: 7, category: '民谣' },
+  { id: 530, name_zh: '马頔', name_en: 'Ma Di', gender: 'male', region: 'CN', language: ['zh'], genres: [48, 49, 17], tags: ['民谣', '麻油叶', '文艺', '独立'], top_songs: ['南山南', '傲寒', '孤岛', '皆非', '时间里的'], voice_desc: '忧郁文艺男声', hot_score: 7, category: '民谣' },
+  // 摇滚扩充
+  { id: 531, name_zh: '谢天笑', name_en: 'Xie Tianxiao', gender: 'male', region: 'CN', language: ['zh'], genres: [1, 2, 6], tags: ['摇滚', '现场之王', '古筝', '硬核'], top_songs: ['向阳花', '冷血动物', '把夜晚染黑', '窗外', '约定的地方'], voice_desc: '狂野摇滚男声', hot_score: 7, category: '摇滚' },
+  { id: 532, name_zh: '郑钧', name_en: 'Zheng Jun', gender: 'male', region: 'CN', language: ['zh'], genres: [1, 3, 48], tags: ['摇滚', '西安', '经典', '文艺'], top_songs: ['灰姑娘', '赤裸裸', '回到拉萨', '私奔', '长安长安'], voice_desc: '磁性摇滚男声', hot_score: 7, category: '摇滚' },
+  { id: 533, name_zh: '许巍', name_en: 'Xu Wei', gender: 'male', region: 'CN', language: ['zh'], genres: [1, 3, 48], tags: ['摇滚', '西安', '文艺', '治愈'], top_songs: ['蓝莲花', '曾经的你', '故乡', '旅行', '完美生活'], voice_desc: '温暖摇滚男声', hot_score: 8, category: '摇滚' },
+  { id: 534, name_zh: '汪峰', name_en: 'Wang Feng', gender: 'male', region: 'CN', language: ['zh'], genres: [1, 2, 3], tags: ['摇滚', '北京', '励志', '导师'], top_songs: ['春天里', '存在', '飞得更高', '怒放的生命', '北京北京'], voice_desc: '激昂摇滚男声', hot_score: 7, category: '摇滚' },
+  { id: 535, name_zh: '黑豹乐队', name_en: 'Black Panther', gender: 'group', region: 'CN', language: ['zh'], genres: [1, 2, 8], tags: ['摇滚', '老牌', '硬摇滚', '经典'], top_songs: ['无地自容', 'Don\'t Break My Heart', '光芒之神', '别去糟蹋', '高级动物'], voice_desc: '张淇高亢男声', hot_score: 6, category: '摇滚' },
+  { id: 536, name_zh: '唐朝乐队', name_en: 'Tang Dynasty', gender: 'group', region: 'CN', language: ['zh'], genres: [1, 2, 8], tags: ['摇滚', '老牌', '重金属', '前卫'], top_songs: ['梦回唐朝', '飞翔鸟', '太阳', '路', '演义'], voice_desc: '丁武高亢男声', hot_score: 6, category: '摇滚' },
+  // 电子/实验
+  { id: 537, name_zh: 'Anti-General', name_en: 'Anti-General', gender: 'male', region: 'CN', language: ['zh', 'en'], genres: [28, 29, 30], tags: ['电子', '制作人', '国风电子', '先锋'], top_songs: ['千面', '侠', '龙', '虎', '鹤'], voice_desc: '电子制作人', hot_score: 6, category: '独立' },
+  { id: 538, name_zh: ' Carta', name_en: 'Carta', gender: 'male', region: 'CN', language: ['zh', 'en'], genres: [28, 29, 30], tags: ['电子', 'DJ', '制作人', '国际'], top_songs: ['Paper Rings', 'Lose Control', 'Take It', 'Make It', 'Do It'], voice_desc: '电子DJ', hot_score: 5, category: '独立' },
+  // 新生代/选秀
+  { id: 539, name_zh: '周深', name_en: 'Zhou Shen', gender: 'male', region: 'CN', language: ['zh'], genres: [16, 25, 3], tags: ['高音', '天籁', 'OST', '二次元'], top_songs: ['大鱼', '达拉崩吧', '起风了', '花开忘忧', '小美满'], voice_desc: '天籁高音男声', hot_score: 9, category: '华语流行' },
+  { id: 540, name_zh: '毛不易', name_en: 'Mao Buyi', gender: 'male', region: 'CN', language: ['zh'], genres: [16, 25, 48], tags: ['创作', '治愈', '选秀', '温暖'], top_songs: ['消愁', '像我这样的人', '平凡的一天', '无问', '借'], voice_desc: '温暖磁性男声', hot_score: 8, category: '华语流行' },
+  { id: 541, name_zh: '华晨宇', name_en: 'Hua Chenyu', gender: 'male', region: 'CN', language: ['zh'], genres: [16, 1, 28], tags: ['高音', '舞台', '选秀', '个性'], top_songs: ['烟火里的尘埃', '齐天', '好想爱这个世界啊', '斗牛', '我管你'], voice_desc: '高亢个性男声', hot_score: 8, category: '华语流行' },
+  { id: 542, name_zh: '张杰', name_en: 'Jason Zhang', gender: 'male', region: 'CN', language: ['zh'], genres: [16, 25, 3], tags: ['高音', '实力', 'OST', '选秀'], top_songs: ['逆战', '天下', '这就是爱', '勿忘心安', '明天过后'], voice_desc: '高亢实力男声', hot_score: 8, category: '华语流行' },
+  { id: 543, name_zh: '李荣浩', name_en: 'Li Ronghao', gender: 'male', region: 'CN', language: ['zh'], genres: [16, 25, 48], tags: ['创作', '全能', '制作人', '吉他'], top_songs: ['李白', '模特', '年少有为', '不将就', '喜剧之王'], voice_desc: '磁性创作男声', hot_score: 8, category: '华语流行' },
+  { id: 544, name_zh: '薛之谦', name_en: 'Joker Xue', gender: 'male', region: 'CN', language: ['zh'], genres: [16, 25, 3], tags: ['情歌', '段子手', '综艺', '创作'], top_songs: ['演员', '丑八怪', '认真的雪', '刚刚好', '绅士'], voice_desc: '磁性深情男声', hot_score: 8, category: '华语流行' },
+  { id: 545, name_zh: '许嵩', name_en: 'Xu Song', gender: 'male', region: 'CN', language: ['zh'], genres: [16, 25, 48], tags: ['创作', '网络', '青春', '回忆'], top_songs: ['断桥残雪', '清明雨上', '素颜', '灰色头像', '雅俗共赏'], voice_desc: '温柔创作男声', hot_score: 7, category: '华语流行' },
+  { id: 546, name_zh: '汪苏泷', name_en: 'Silence Wang', gender: 'male', region: 'CN', language: ['zh'], genres: [16, 25, 3], tags: ['创作', '网络', '青春', 'OST'], top_songs: ['不分手的恋爱', '年轮', '一笑倾城', '万有引力', '有点甜'], voice_desc: '清亮创作男声', hot_score: 7, category: '华语流行' },
+  { id: 547, name_zh: '徐良', name_en: 'Xu Liang', gender: 'male', region: 'CN', language: ['zh'], genres: [16, 25, 3], tags: ['创作', '网络', '青春', '对唱'], top_songs: ['客官不可以', '红装', '坏女孩', '七秒钟的记忆', '情动'], voice_desc: '温柔创作男声', hot_score: 5, category: '华语流行' },
+  { id: 548, name_zh: '本兮', name_en: 'Ben Xi', gender: 'female', region: 'CN', language: ['zh'], genres: [16, 25, 48], tags: ['网络', '青春', '回忆', '创作'], top_songs: ['未成年', '一个人哭', '情动', '再见', '创作者'], voice_desc: '甜美青春女声', hot_score: 5, category: '华语流行' },
+  // 粤语/港乐扩充
+  { id: 549, name_zh: '古巨基', name_en: 'Leo Ku', gender: 'male', region: 'HK', language: ['zh', 'yue'], genres: [16, 25, 3], tags: ['粤语', '港乐', '情歌', '游戏'], top_songs: ['爱与诚', '任天堂', '游戏基', '爆了', 'MONICA'], voice_desc: '温柔港乐男声', hot_score: 6, category: '华语流行' },
+  { id: 550, name_zh: '许志安', name_en: 'Andy Hui', gender: 'male', region: 'HK', language: ['zh', 'yue'], genres: [16, 25, 3], tags: ['粤语', '港乐', '情歌', '实力'], top_songs: ['唯独你是不可取替', '为什么你爱我', '男人最痛', '彻夜缠绵', '爱你'], voice_desc: '深情港乐男声', hot_score: 6, category: '华语流行' },
+  { id: 551, name_zh: '梁汉文', name_en: 'Edmond Leung', gender: 'male', region: 'HK', language: ['zh', 'yue'], genres: [16, 25, 3], tags: ['粤语', '港乐', '实力', '综艺'], top_songs: ['一再问究竟', '衣柜里的男人', '缠绵游戏', '活着', '七友'], voice_desc: '磁性港乐男声', hot_score: 5, category: '华语流行' },
+  { id: 552, name_zh: '侧田', name_en: 'Justin Lo', gender: 'male', region: 'HK', language: ['zh', 'yue'], genres: [16, 25, 3], tags: ['粤语', '港乐', '创作', '高音'], top_songs: ['好人', '决战二世', '命硬', '三十日', 'Kong'], voice_desc: '高音港乐男声', hot_score: 6, category: '华语流行' },
+  { id: 553, name_zh: '张敬轩', name_en: 'Hins Cheung', gender: 'male', region: 'HK', language: ['zh', 'yue'], genres: [16, 25, 3], tags: ['粤语', '港乐', '创作', '实力'], top_songs: ['断点', '酷爱', '樱花树下', 'Blessing', '青春常驻'], voice_desc: '磁性港乐男声', hot_score: 7, category: '华语流行' },
+  // 台湾扩充
+  { id: 554, name_zh: '伍佰', name_en: 'Wu Bai', gender: 'male', region: 'TW', language: ['zh'], genres: [1, 3, 48], tags: ['摇滚', '台语', '现场之王', '经典'], top_songs: ['挪威的森林', '突然的自我', '浪人情歌', 'Last Dance', '树枝孤鸟'], voice_desc: '沙哑摇滚男声', hot_score: 8, category: '华语流行' },
+  { id: 555, name_zh: '陈升', name_en: 'Bobby Chen', gender: 'male', region: 'TW', language: ['zh'], genres: [48, 1, 17], tags: ['独立', '文艺', '台语', '诗人'], top_songs: ['北京一夜', '牡丹亭外', '然而', '风筝', '二十岁的眼泪'], voice_desc: '独特文艺男声', hot_score: 6, category: '华语流行' },
+  { id: 556, name_zh: '吴青峰', name_en: 'Wu Qingfeng', gender: 'male', region: 'TW', language: ['zh'], genres: [16, 17, 25], tags: ['创作', '独立', '苏打绿', '文艺'], top_songs: ['起风了', '太空人', '费洛蒙小姐', '最难相遇', '雨中的操场'], voice_desc: '独特文艺男声', hot_score: 7, category: '华语流行' },
+  { id: 557, name_zh: '青峰', name_en: 'Qingfeng', gender: 'male', region: 'TW', language: ['zh'], genres: [16, 17, 25], tags: ['创作', '独立', '文艺', '细腻'], top_songs: ['起风了', '太空人', '费洛蒙小姐', '最难相遇', '雨中的操场'], voice_desc: '独特文艺男声', hot_score: 7, category: '华语流行' },
+  { id: 558, name_zh: '韦礼安', name_en: 'WeiBird', gender: 'male', region: 'TW', language: ['zh', 'en'], genres: [16, 25, 48], tags: ['创作', '才子', '吉他', '温暖'], top_songs: ['如果可以', '女孩', '有没有', '阳光中的向日葵', '慢慢等'], voice_desc: '温暖创作男声', hot_score: 7, category: '华语流行' },
+  { id: 559, name_zh: '卢广仲', name_en: 'Crowd Lu', gender: 'male', region: 'TW', language: ['zh'], genres: [16, 17, 48], tags: ['创作', '独立', '吉他', '清新'], top_songs: ['鱼仔', '刻在我心底的名字', '几分之几', '早安晨之美', '无敌铁金刚'], voice_desc: '清新创作男声', hot_score: 7, category: '华语流行' },
+  { id: 560, name_zh: '黄礼格', name_en: 'Yellow', gender: 'male', region: 'TW', language: ['zh'], genres: [16, 25, 3], tags: ['创作', '新生代', '温暖', '治愈'], top_songs: ['我想你', '123我', 'Sorry', '你，好不好？', '我不需要每一个瞬间都完美'], voice_desc: '温暖创作男声', hot_score: 5, category: '华语流行' },
+  // 女歌手扩充
+  { id: 561, name_zh: '杨千嬅', name_en: 'Miriam Yeung', gender: 'female', region: 'HK', language: ['zh', 'yue'], genres: [16, 25, 3], tags: ['粤语', '港乐', '治愈', '影后'], top_songs: ['再见二丁目', '少女的祈祷', '野孩子', '勇', '可惜我是水瓶座'], voice_desc: '治愈港乐女声', hot_score: 7, category: '华语流行' },
+  { id: 562, name_zh: '容祖儿', name_en: 'Joey Yung', gender: 'female', region: 'HK', language: ['zh', 'yue'], genres: [16, 25, 19], tags: ['粤语', '港乐', '天后', '唱跳'], top_songs: ['小小', '挥着翅膀的女孩', '16个夏天', '破相', '心淡'], voice_desc: '实力港乐女声', hot_score: 7, category: '华语流行' },
+  { id: 563, name_zh: 'Twins', name_en: 'Twins', gender: 'group', region: 'HK', language: ['zh', 'yue'], genres: [16, 25, 19], tags: ['粤语', '港乐', '组合', '青春'], top_songs: ['下一站天后', '明爱暗伤', '朋友的爱', '风筝与风', '女校男生'], voice_desc: '双女声和声', hot_score: 7, category: '华语流行' },
+  { id: 564, name_zh: '薛凯琪', name_en: 'Fiona Sit', gender: 'female', region: 'HK', language: ['zh', 'yue'], genres: [16, 25, 17], tags: ['粤语', '港乐', '甜美', '文艺'], top_songs: ['小黑与我', '男孩像你', 'next', '给十年后的我', '苏州河'], voice_desc: '甜美港乐女声', hot_score: 5, category: '华语流行' },
+  { id: 565, name_zh: '邓紫棋', name_en: 'G.E.M.', gender: 'female', region: 'HK', language: ['zh', 'en'], genres: [16, 25, 3], tags: ['高音', '实力', '创作', '国际化'], top_songs: ['泡沫', '光年之外', '倒数', '句号', '摩天动物园'], voice_desc: '高亢实力女声', hot_score: 9, category: '华语流行' },
+  { id: 566, name_zh: 'A-Lin', name_en: 'A-Lin', gender: 'female', region: 'TW', language: ['zh'], genres: [16, 25, 3], tags: ['高音', '实力', '情歌', '原住民'], top_songs: ['给我一个理由忘记', '有一种悲伤', '好朋友的祝福', '幸福了然后呢', '拿走了什么'], voice_desc: '高亢深情女声', hot_score: 8, category: '华语流行' },
+  { id: 567, name_zh: '徐佳莹', name_en: 'Lala Hsu', gender: 'female', region: 'TW', language: ['zh'], genres: [16, 25, 17], tags: ['创作', '实力', '金曲', '文艺'], top_songs: ['失落沙洲', '身骑白马', '寻人启事', '言不由衷', '到此为止'], voice_desc: '独特创作女声', hot_score: 7, category: '华语流行' },
+  { id: 568, name_zh: '艾怡良', name_en: 'Eve Ai', gender: 'female', region: 'TW', language: ['zh'], genres: [16, 64, 25], tags: ['创作', '实力', '金曲', '个性'], top_songs: ['我们的总和', '寂寞无害', '空头支票', '整夜', '给朱丽叶'], voice_desc: '磁性个性女声', hot_score: 6, category: '华语流行' },
+  { id: 569, name_zh: '魏如萱', name_en: 'Wei Ru Xuan', gender: 'female', region: 'TW', language: ['zh'], genres: [16, 17, 10], tags: ['独立', '文艺', '个性', '自然卷'], top_songs: ['彼个所在', '晚安', '你啊', '陪着我', '在不确定的世界里'], voice_desc: '独特文艺女声', hot_score: 6, category: '华语流行' },
+  { id: 570, name_zh: '田馥甄', name_en: 'Hebe Tien', gender: 'female', region: 'TW', language: ['zh'], genres: [16, 25, 17], tags: ['SHE', '高音', '文艺', '独立'], top_songs: ['小幸运', '魔鬼中的天使', '寂寞寂寞就好', '你就不要想起我', '爱着爱着就永远'], voice_desc: '清亮高音女声', hot_score: 8, category: '华语流行' },
+  { id: 571, name_zh: '陈绮贞', name_en: 'Cheer Chen', gender: 'female', region: 'TW', language: ['zh'], genres: [48, 17, 16], tags: ['独立', '文艺', '吉他', '清新'], top_songs: ['旅行的意义', '鱼', '太阳', '失败者的飞翔', '让我想一想'], voice_desc: '清新文艺女声', hot_score: 7, category: '华语流行' },
+  { id: 572, name_zh: '黄小琥', name_en: 'Huang Xiaohu', gender: 'female', region: 'TW', language: ['zh'], genres: [16, 25, 3], tags: ['高音', '实力', 'Pub', '情歌'], top_songs: ['没那么简单', '不只是朋友', '我可以', '重来', '你说你爱我'], voice_desc: '浑厚实力女声', hot_score: 6, category: '华语流行' },
+  { id: 573, name_zh: '黄丽玲', name_en: 'A-Lin', gender: 'female', region: 'TW', language: ['zh'], genres: [16, 25, 3], tags: ['高音', '实力', '情歌', '原住民'], top_songs: ['给我一个理由忘记', '有一种悲伤', '好朋友的祝福', '幸福了然后呢', '拿走了什么'], voice_desc: '高亢深情女声', hot_score: 8, category: '华语流行' },
+  { id: 574, name_zh: '黄美珍', name_en: 'Jianing', gender: 'female', region: 'TW', language: ['zh'], genres: [16, 25, 1], tags: ['高音', '实力', '摇滚', '星光'], top_songs: ['途中', '傻瓜', '爱你', '不要乱说', '慢热'], voice_desc: '高亢摇滚女声', hot_score: 5, category: '华语流行' },
+  { id: 575, name_zh: '李佳薇', name_en: 'Vivian Lee', gender: 'female', region: 'TW', language: ['zh'], genres: [16, 25, 3], tags: ['高音', '实力', '星光', '情歌'], top_songs: ['煎熬', '出口', '像天堂', '勇敢', '学会'], voice_desc: '高亢实力女声', hot_score: 5, category: '华语流行' },
+  { id: 576, name_zh: '黄龄', name_en: 'Huang Ling', gender: 'female', region: 'CN', language: ['zh'], genres: [16, 25, 3], tags: ['转音', '性感', '实力', '独特'], top_songs: ['High歌', '痒', '特别', '风月', '原谅'], voice_desc: '性感转音女声', hot_score: 6, category: '华语流行' },
+  { id: 577, name_zh: '郁可唯', name_en: 'Yisa Yu', gender: 'female', region: 'CN', language: ['zh'], genres: [16, 25, 3], tags: ['OST', '深情', '实力', '选秀'], top_songs: ['时间煮雨', '指望', '暖心', '路过蜻蜓', '水中花'], voice_desc: '清澈深情女声', hot_score: 6, category: '华语流行' },
+  { id: 578, name_zh: '张靓颖', name_en: 'Jane Zhang', gender: 'female', region: 'CN', language: ['zh', 'en'], genres: [16, 25, 3], tags: ['高音', '实力', '国际化', '选秀'], top_songs: ['画心', '如果爱下去', '终于等到你', '我的梦', 'Work For It'], voice_desc: '高亢实力女声', hot_score: 8, category: '华语流行' },
+  { id: 579, name_zh: '李宇春', name_en: 'Chris Lee', gender: 'female', region: 'CN', language: ['zh'], genres: [16, 25, 19], tags: ['中性', '偶像', '唱跳', '选秀'], top_songs: ['下个路口见', '和你一样', '再不疯狂我们就老了', '无价之姐', '1987我不知会遇见你'], voice_desc: '磁性中性女声', hot_score: 7, category: '华语流行' },
+  { id: 580, name_zh: '周笔畅', name_en: 'Bibi Zhou', gender: 'female', region: 'CN', language: ['zh'], genres: [16, 25, 3], tags: ['中性', '实力', '选秀', '创作'], top_songs: ['笔记', '谁动了我的琴弦', '现在', '对嘴', '翻白眼'], voice_desc: '磁性中性女声', hot_score: 6, category: '华语流行' },
 ];
 
 // ===== Helpers =====
@@ -614,6 +707,6 @@ export function searchArtists(query: string): Artist[] {
 }
 
 // ===== 编译期断言 =====
-if (ARTISTS.length !== 500) {
-  throw new Error(`ARTISTS 数量错误: 期望 500, 实际 ${ARTISTS.length}`);
+if (ARTISTS.length !== 580) {
+  throw new Error(`ARTISTS 数量错误: 期望 580, 实际 ${ARTISTS.length}`);
 }
