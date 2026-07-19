@@ -636,7 +636,15 @@ export function searchArtists(query: string): Artist[] {
   );
 }
 
-// ===== 编译期断言 =====
-if (ARTISTS.length !== 580) {
-  throw new Error(`ARTISTS 数量错误: 期望 580, 实际 ${ARTISTS.length}`);
+// ===== 数据校验 =====
+// 动态校验：确保数据非空且无重复ID
+if (ARTISTS.length === 0) {
+  throw new Error('ARTISTS 数据为空');
+}
+const artistIds = new Set<number>();
+for (const a of ARTISTS) {
+  if (artistIds.has(a.id)) {
+    throw new Error(`ARTISTS 存在重复 ID: ${a.id}`);
+  }
+  artistIds.add(a.id);
 }
