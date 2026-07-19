@@ -19,6 +19,7 @@ import { SELECTION_STYLES } from '@/lib/ui-tokens';
 import { GenreLibraryDrawer } from '@/components/genre-library-drawer';
 import { ArtistLibraryDrawer } from '@/components/artist-library-drawer';
 import { VocalWeightSliders, weightsToPrompt, type VocalWeights } from '@/components/vocal-weight-sliders';
+import { ModelAdvancedOptions } from '@/components/model-advanced-options';
 import { GENRES } from '@/data/genres';
 import { ARTISTS, getArtistById } from '@/data/artists';
 
@@ -90,6 +91,11 @@ export default function CreatePage() {
   
   // ========== Suno advanced options panel ==========
   const [sunoAdvancedOpen, setSunoAdvancedOpen] = useState(false);
+
+  // ========== Model-specific advanced options (Song Name, Lyrics, Style) ==========
+  const [songName, setSongName] = useState('');
+  const [advancedLyrics, setAdvancedLyrics] = useState('');
+  const [styleOfMusic, setStyleOfMusic] = useState('');
 
   // ========== Genre & Artist Library Drawers ==========
   const [genreDrawerOpen, setGenreDrawerOpen] = useState(false);
@@ -921,16 +927,29 @@ export default function CreatePage() {
           </div>
         )}
 
-        {/* Suno Advanced Options (only show when Suno tab is active) */}
+        {/* Universal Advanced Options for ALL models */}
+        <div className="mb-6">
+          <ModelAdvancedOptions
+            provider={provider.value || 'minimax'}
+            songName={songName}
+            onSongNameChange={setSongName}
+            lyrics={advancedLyrics}
+            onLyricsChange={setAdvancedLyrics}
+            styleOfMusic={styleOfMusic}
+            onStyleOfMusicChange={setStyleOfMusic}
+          />
+        </div>
+
+        {/* Suno-specific Advanced Options (only show when Suno tab is active) */}
         {provider.value === 'suno' && (
           <div className="mb-6 space-y-4">
-            {/* Collapsible Advanced Options */}
+            {/* Collapsible Suno-specific Options */}
             <button
               onClick={() => setSunoAdvancedOpen(!sunoAdvancedOpen)}
               className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               <span className={`transition-transform ${sunoAdvancedOpen ? 'rotate-90' : ''}`}>▶</span>
-              高级选项
+              Suno 专属选项
               {(gender.value || timbres.values.length > 0) && (
                 <span className="px-1.5 py-0.5 rounded bg-amber-400/10 text-amber-400 text-[10px]">
                   已配置
@@ -1144,7 +1163,7 @@ export default function CreatePage() {
                 className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs bg-gradient-to-r from-amber-400/10 to-purple-500/10 text-amber-400 border border-amber-400/30 hover:border-amber-400/50 transition-all"
               >
                 <Library className="w-3.5 h-3.5" />
-                打开曲风库（300 种）
+                打开曲风库
                 {selectedGenreIds.length > 0 && (
                   <span className="ml-1 px-1.5 py-0.5 rounded bg-amber-400/20 text-[10px]">
                     已选 {selectedGenreIds.length}
@@ -1162,7 +1181,7 @@ export default function CreatePage() {
                 className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs bg-gradient-to-r from-purple-500/10 to-amber-400/10 text-purple-300 border border-purple-500/30 hover:border-purple-500/50 transition-all"
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-                打开歌手库（500 位）
+                打开歌手库
                 {selectedArtistIds.length > 0 && (
                   <span className="ml-1 px-1.5 py-0.5 rounded bg-purple-500/20 text-[10px]">
                     已选 {selectedArtistIds.length}
