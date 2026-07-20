@@ -11,6 +11,9 @@ pnpm install
 echo "Ensuring TypeScript packages are installed..."
 pnpm add -D typescript @types/react @types/node
 
+echo "Removing tsconfig.json to skip TypeScript detection..."
+rm -f tsconfig.json
+
 echo "Building the Next.js project..."
 pnpm next build
 
