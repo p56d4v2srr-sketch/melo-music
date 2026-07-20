@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { Inspector } from 'react-dev-inspector';
 import { PlayerProvider } from '@/components/global-player';
 import { Toaster } from '@/components/ui/sonner';
 import { SupabaseConfigProvider } from '@/lib/supabase-config-inject';
@@ -56,8 +55,6 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const isDev = process.env.COZE_PROJECT_ENV === 'DEV';
-
   return (
     <html lang="zh-CN" className="dark" suppressHydrationWarning>
       <head suppressHydrationWarning>
@@ -70,7 +67,6 @@ export default function RootLayout({
         <meta name="theme-color" content="#0a0a0f" />
       </head>
       <body className={`antialiased`} suppressHydrationWarning>
-        {isDev && <Inspector />}
         <SupabaseConfigProvider>
           <AuthProvider>
             <PlayerProvider>
