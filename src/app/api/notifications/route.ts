@@ -17,6 +17,9 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get('offset') || '0');
 
     const client = getSupabaseClient();
+    if (!client) {
+      return NextResponse.json({ success: false, error: 'Database not configured' }, { status: 503 });
+    }
 
     let query = client
       .from('notifications')
@@ -83,6 +86,9 @@ export async function POST(request: NextRequest) {
     }
 
     const client = getSupabaseClient();
+    if (!client) {
+      return NextResponse.json({ success: false, error: 'Database not configured' }, { status: 503 });
+    }
 
     const { data, error } = await client
       .from('notifications')
@@ -131,6 +137,9 @@ export async function PATCH(request: NextRequest) {
     const { notificationIds, markAllRead } = body;
 
     const client = getSupabaseClient();
+    if (!client) {
+      return NextResponse.json({ success: false, error: 'Database not configured' }, { status: 503 });
+    }
 
     if (markAllRead) {
       await client

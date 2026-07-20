@@ -15,6 +15,9 @@ export async function POST(request: NextRequest) {
     }
 
     const client = getSupabaseClient();
+    if (!client) {
+      return NextResponse.json({ success: false, error: 'Database not configured' }, { status: 503 });
+    }
     const { data, error } = await client
       .from('messages')
       .insert({
@@ -54,6 +57,9 @@ export async function GET(request: NextRequest) {
     }
 
     const client = getSupabaseClient();
+    if (!client) {
+      return NextResponse.json({ success: false, error: 'Database not configured' }, { status: 503 });
+    }
 
     if (otherId) {
       // Get conversation with specific user

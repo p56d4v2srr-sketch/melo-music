@@ -45,6 +45,9 @@ export async function GET(request: NextRequest) {
     }
 
     const client = getSupabaseClient();
+    if (!client) {
+      return NextResponse.json({ success: false, error: 'Database not configured' }, { status: 503 });
+    }
     const { data, error } = await client
       .from('drafts')
       .select('*')
@@ -101,6 +104,9 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const client = getSupabaseClient();
+    if (!client) {
+      return NextResponse.json({ success: false, error: 'Database not configured' }, { status: 503 });
+    }
 
     const { data, error } = await client
       .from('drafts')

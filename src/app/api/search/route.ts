@@ -17,6 +17,9 @@ export async function GET(request: NextRequest) {
     }
 
     const client = getSupabaseClient();
+    if (!client) {
+      return NextResponse.json({ success: false, error: 'Database not configured' }, { status: 503 });
+    }
     const results: {
       songs: any[];
       artists: any[];

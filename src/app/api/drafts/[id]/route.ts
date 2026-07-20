@@ -20,6 +20,9 @@ export async function GET(
 
     const { id } = await params;
     const client = getSupabaseClient();
+    if (!client) {
+      return NextResponse.json({ success: false, error: 'Database not configured' }, { status: 503 });
+    }
     const { data, error } = await client
       .from('drafts')
       .select('*')
@@ -69,6 +72,9 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
     const client = getSupabaseClient();
+    if (!client) {
+      return NextResponse.json({ success: false, error: 'Database not configured' }, { status: 503 });
+    }
 
     const { data, error } = await client
       .from('drafts')
@@ -115,6 +121,9 @@ export async function DELETE(
 
     const { id } = await params;
     const client = getSupabaseClient();
+    if (!client) {
+      return NextResponse.json({ success: false, error: 'Database not configured' }, { status: 503 });
+    }
     const { error } = await client
       .from('drafts')
       .delete()

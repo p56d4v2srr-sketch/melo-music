@@ -12,6 +12,9 @@ export async function GET(request: NextRequest) {
     const offset = (page - 1) * limit;
 
     const client = getSupabaseClient();
+    if (!client) {
+      return NextResponse.json({ success: false, error: 'Database not configured' }, { status: 503 });
+    }
 
     // Build query
     let query = client
