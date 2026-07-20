@@ -75,7 +75,10 @@
     "@tailwindcss/postcss": "^4.1.18",
     "postcss": "^8.5.20",
     "autoprefixer": "^10.5.4",
-    "tailwindcss": "^4.1.18"
+    "tailwindcss": "^4.1.18",
+    "typescript": "^5.9.3",
+    "@types/react": "^19.2.10",
+    "@types/node": "^20.19.30"
   },
   "devDependencies": {
     "@react-dev-inspector/babel-plugin": "^2.0.1",
@@ -91,10 +94,7 @@
     "stylelint-config-standard": "^38.0.0",
     "tsx": "^4.19.2",
     "drizzle-kit": "^0.31.8",
-    "tsup": "^8.3.5",
-    "typescript": "^5.9.3",
-    "@types/node": "^20.19.30",
-    "@types/react": "^19.2.10"
+    "tsup": "^8.3.5"
   },
   "packageManager": "pnpm@9.0.0",
   "engines": {
