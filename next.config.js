@@ -1,13 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  devInspector: false,
   reactStrictMode: true,
-  typescript: {
-    ignoreBuildErrors: true,
-  },
   turbopack: {
     resolveAlias: {
-      '@': './src',
+      '@/*': ['./src/*'],
     },
   },
   images: {
