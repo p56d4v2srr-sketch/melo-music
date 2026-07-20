@@ -8,6 +8,9 @@ cd "${COZE_WORKSPACE_PATH}"
 echo "Installing dependencies..."
 pnpm install
 
+echo "Installing TypeScript packages for build..."
+pnpm add -D typescript @types/react @types/node --prefer-offline
+
 echo "Building the Next.js project..."
 pnpm next build
 
