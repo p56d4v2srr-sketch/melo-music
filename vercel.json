@@ -1,5 +1,10 @@
 {
   "installCommand": "pnpm install --prod=false",
   "buildCommand": "pnpm build",
-  "devCommand": "pnpm dev"
+  "devCommand": "pnpm dev",
+  "build": {
+    "env": {
+      "BUILD_TIMESTAMP": "2026-07-21T13:54:43.923679"
+    }
+  }
 }
