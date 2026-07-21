@@ -27,8 +27,6 @@ const nextConfig = {
   compress: true,
   // 优化输出
   poweredByHeader: false,
-  // 使用 standalone 输出模式，减少部署体积
-  output: 'standalone',
 };
 
 module.exports = nextConfig;
