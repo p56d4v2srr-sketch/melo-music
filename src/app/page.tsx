@@ -23,6 +23,8 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth-context';
 import { shareSong } from '@/lib/share';
 
+export const dynamic = 'force-dynamic';
+
 interface FeedSong {
   id: string;
   title: string;
