@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build": "pnpm add -D typescript @types/react @types/node --prefer-offline && next build",
+    "build": "pnpm add typescript @types/react @types/node --prefer-offline && next build",
     "dev": "bash ./scripts/dev.sh",
     "preinstall": "npx only-allow pnpm",
     "lint": "eslint",
